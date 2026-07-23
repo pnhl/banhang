@@ -176,6 +176,8 @@ export default function Home() {
   useEffect(() => {
     const saved = window.localStorage.getItem("nova-cart");
     if (saved) setCart(JSON.parse(saved));
+    const initialQuery = new URLSearchParams(window.location.search).get("q");
+    if (initialQuery) setQuery(initialQuery);
   }, []);
 
   useEffect(() => {
@@ -250,11 +252,11 @@ export default function Home() {
             </button>
           </div>
           <nav className="header-actions" aria-label="Tiện ích">
-            <button onClick={() => setLoginOpen(true)}><span>♙</span><small>Tài khoản</small></button>
-            <button onClick={() => setCartOpen(true)} className="cart-button">
+            <a href="/login"><span>♙</span><small>Tài khoản</small></a>
+            <a href="/cart" className="cart-button">
               <span>▱</span><small>Giỏ hàng</small>
               {totalItems > 0 && <b>{totalItems}</b>}
-            </button>
+            </a>
           </nav>
         </div>
         <div className="quick-links">
@@ -403,7 +405,7 @@ export default function Home() {
                 </button>
                 <div className="product-info">
                   <p className="product-category">{product.category}</p>
-                  <button className="product-name" onClick={() => setSelected(product)}>{product.name}</button>
+                  <a className="product-name" href={`/product/${product.id}`}>{product.name}</a>
                   <div className="rating"><span>★</span> {product.rating} <small>· Đã bán {product.sold}</small></div>
                   <div className="price-row">
                     <div><strong>{formatPrice(product.price)}</strong><del>{formatPrice(product.oldPrice)}</del></div>
@@ -439,8 +441,8 @@ export default function Home() {
             <a className="brand" href="#top"><span className="brand-mark">N</span><span>NOVA<span>market</span></span></a>
             <p>Chọn kỹ từng món. Giao nhanh từng đơn. Mua sắm nhẹ nhàng hơn mỗi ngày.</p>
           </div>
-          <div><h4>Về NOVA</h4><a href="#">Giới thiệu</a><a href="#">Tuyển dụng</a><a href="#">Điều khoản</a></div>
-          <div><h4>Hỗ trợ</h4><a href="#">Trung tâm trợ giúp</a><a href="#">Chính sách đổi trả</a><a href="#">Vận chuyển</a></div>
+          <div><h4>Về NOVA</h4><a href="/admin">Kênh quản trị</a><a href="/register">Đăng ký</a><a href="/policies/terms">Điều khoản</a></div>
+          <div><h4>Hỗ trợ</h4><a href="/policies/privacy">Bảo mật</a><a href="/policies/returns">Chính sách đổi trả</a><a href="/policies/shipping">Vận chuyển</a></div>
           <div><h4>Nhận tin ưu đãi</h4><p>Deal tốt, không gửi dồn.</p><form onSubmit={(e) => { e.preventDefault(); setToast("Đăng ký nhận tin thành công!"); }}><input placeholder="Email của bạn" type="email" required /><button>→</button></form></div>
         </div>
         <div className="wrap copyright"><span>© 2026 NOVA Market</span><span>Made for brighter shopping.</span></div>
@@ -449,8 +451,8 @@ export default function Home() {
       <nav className="mobile-nav" aria-label="Điều hướng di động">
         <a href="#top"><span>⌂</span>Trang chủ</a>
         <a href="#products"><span>⌕</span>Tìm kiếm</a>
-        <button onClick={() => setCartOpen(true)}><span>▱</span>Giỏ hàng{totalItems > 0 && <b>{totalItems}</b>}</button>
-        <button onClick={() => setLoginOpen(true)}><span>♙</span>Tài khoản</button>
+        <a href="/cart"><span>▱</span>Giỏ hàng{totalItems > 0 && <b>{totalItems}</b>}</a>
+        <a href="/login"><span>♙</span>Tài khoản</a>
       </nav>
 
       {selected && (
@@ -466,7 +468,8 @@ export default function Home() {
               <p className="description">{selected.description}</p>
               <div className="variant"><b>Màu sắc</b><div><button className="active">Tiêu chuẩn</button><button>Than chì</button><button>Cát nhạt</button></div></div>
               <ul><li>✓ Sản phẩm chính hãng 100%</li><li>✓ Đổi trả miễn phí trong 15 ngày</li><li>✓ Bảo hành 12 tháng tại NOVA</li></ul>
-              <div className="modal-actions"><button onClick={() => addToCart(selected)}>Thêm vào giỏ</button><button onClick={() => { addToCart(selected); setSelected(null); setCartOpen(true); }}>Mua ngay</button></div>
+              <a className="detail-page-link" href={`/product/${selected.id}`}>Xem trang chi tiết đầy đủ →</a>
+              <div className="modal-actions"><button onClick={() => addToCart(selected)}>Thêm vào giỏ</button><button onClick={() => { addToCart(selected); window.location.href = "/cart"; }}>Mua ngay</button></div>
             </div>
           </section>
         </div>
@@ -503,7 +506,7 @@ export default function Home() {
               <label>Mật khẩu<input required type="password" placeholder="••••••••" /></label>
               <div className="form-row"><label><input type="checkbox" /> Ghi nhớ tôi</label><a href="#">Quên mật khẩu?</a></div>
               <button className="primary-submit">Đăng nhập</button>
-              <p>Chưa có tài khoản? <a href="#">Đăng ký miễn phí</a></p>
+              <p>Chưa có tài khoản? <a href="/register">Đăng ký miễn phí</a></p>
             </form>
           </section>
         </div>
