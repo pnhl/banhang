@@ -38,8 +38,10 @@ test("renders the connected commerce routes", async () => {
   const routes = [
     ["/cart", "Giỏ hàng"],
     ["/checkout", "Hoàn tất đơn hàng"],
+    ["/orders/NV-DEMO", "Đang tải đơn hàng"],
     ["/account", "Đăng nhập để quản lý mua sắm"],
     ["/wishlist", "Sản phẩm yêu thích"],
+    ["/support", "Trung tâm trợ giúp"],
     ["/login", "Đăng nhập"],
     ["/register", "Đăng ký thành viên"],
     ["/product/1", "Tai nghe chụp tai NovaSound Air"],

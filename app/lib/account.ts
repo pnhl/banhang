@@ -11,7 +11,8 @@ export type OrderStatus =
   | "Chờ xác nhận"
   | "Đang đóng gói"
   | "Đang giao"
-  | "Hoàn tất";
+  | "Hoàn tất"
+  | "Đã hủy";
 
 export type NovaOrder = {
   id: string;
@@ -19,6 +20,9 @@ export type NovaOrder = {
   customer: AccountProfile;
   items: CartLine[];
   payment: string;
+  shippingMethod?: string;
+  shippingFee?: number;
+  shippingNote?: string;
   subtotal: number;
   discount: number;
   total: number;
@@ -56,6 +60,10 @@ export function getOrders(): NovaOrder[] {
   return readJson<NovaOrder[]>(ORDERS_KEY, []);
 }
 
+export function getOrder(id: string) {
+  return getOrders().find((order) => order.id === id) ?? null;
+}
+
 export function saveOrders(orders: NovaOrder[]) {
   window.localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
   window.dispatchEvent(new Event("nova-orders-updated"));
@@ -79,6 +87,17 @@ export function createOrder(
   return next;
 }
 
+export function cancelOrder(id: string) {
+  const orders = getOrders();
+  const target = orders.find((order) => order.id === id);
+  if (!target || target.status !== "Chờ xác nhận") return null;
+  const next = orders.map((order) =>
+    order.id === id ? { ...order, status: "Đã hủy" as const } : order,
+  );
+  saveOrders(next);
+  return next.find((order) => order.id === id) ?? null;
+}
+
 export function getWishlistIds(): number[] {
   return readJson<number[]>(WISHLIST_KEY, []);
 }
@@ -92,4 +111,3 @@ export function toggleWishlist(id: number) {
   window.dispatchEvent(new Event("nova-wishlist-updated"));
   return next;
 }
-

@@ -54,7 +54,7 @@ export function SiteHeader() {
           </nav>
         </div>
         <div className="site-subnav wrap">
-          <nav><a href="/">Trang chủ</a><a href="/#products">Sản phẩm</a><a href="/policies/shipping">Giao hàng</a><a href="/policies/returns">Đổi trả</a></nav>
+          <nav><a href="/">Trang chủ</a><a href="/#products">Sản phẩm</a><a href="/policies/shipping">Giao hàng</a><a href="/policies/returns">Đổi trả</a><a href="/support">Trợ giúp</a></nav>
           <a href="/admin">Kênh quản trị →</a>
         </div>
       </header>

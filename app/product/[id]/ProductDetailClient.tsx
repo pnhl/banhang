@@ -9,15 +9,16 @@ export function ProductDetailClient({ product }: { product: Product }) {
   const [tab, setTab] = useState("description");
   const [toast, setToast] = useState("");
   const [liked, setLiked] = useState(false);
+  const [variant, setVariant] = useState("Cát nhạt");
   const related = products.filter((item) => item.category === product.category && item.id !== product.id).slice(0, 3);
 
   useEffect(() => setLiked(getWishlistIds().includes(product.id)), [product.id]);
 
   const add = (buyNow = false) => {
-    addProductToCart(product, quantity);
-    if (buyNow) window.location.href = "/cart";
+    addProductToCart(product, quantity, variant);
+    if (buyNow) window.location.href = "/checkout";
     else {
-      setToast(`Đã thêm ${quantity} sản phẩm vào giỏ`);
+      setToast(`Đã thêm ${quantity} sản phẩm · ${variant} vào giỏ`);
       window.setTimeout(() => setToast(""), 2200);
     }
   };
@@ -37,8 +38,22 @@ export function ProductDetailClient({ product }: { product: Product }) {
           <div className="detail-rating"><b>★ {product.rating}</b><span>248 đánh giá</span><span>Đã bán {product.sold}</span></div>
           <div className="detail-price"><strong>{formatPrice(product.price)}</strong><del>{formatPrice(product.oldPrice)}</del><b>Tiết kiệm {Math.round((1 - product.price / product.oldPrice) * 100)}%</b></div>
           <p className="detail-lead">{product.description}</p>
-          <div className="detail-choice"><label>Màu sắc</label><div><button className="selected">Cát nhạt</button><button>Than chì</button><button>Xanh rêu</button></div></div>
-          <div className="detail-choice"><label>Số lượng</label><div className="detail-quantity"><button onClick={() => setQuantity(Math.max(1, quantity - 1))}>−</button><b>{quantity}</b><button onClick={() => setQuantity(quantity + 1)}>＋</button><span>Còn 42 sản phẩm</span></div></div>
+          <div className="detail-choice">
+            <label>Màu sắc</label>
+            <div>
+              {["Cát nhạt", "Than chì", "Xanh rêu"].map((option) => (
+                <button
+                  key={option}
+                  className={variant === option ? "selected" : ""}
+                  onClick={() => setVariant(option)}
+                  aria-pressed={variant === option}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="detail-choice"><label>Số lượng</label><div className="detail-quantity"><button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Giảm số lượng">−</button><b>{quantity}</b><button onClick={() => setQuantity(Math.min(10, quantity + 1))} aria-label="Tăng số lượng">＋</button><span>Còn 42 sản phẩm · tối đa 10 mỗi đơn</span></div></div>
           <div className="detail-actions"><button onClick={() => add(false)}>Thêm vào giỏ</button><button onClick={() => add(true)}>Mua ngay · {formatPrice(product.price * quantity)}</button></div>
           <button className={`detail-wishlist ${liked ? "active" : ""}`} onClick={() => setLiked(toggleWishlist(product.id).includes(product.id))}>{liked ? "♥ Đã lưu vào yêu thích" : "♡ Lưu sản phẩm yêu thích"}</button>
           <div className="detail-benefits"><p><span>↺</span><b>Đổi trả 15 ngày<small>Miễn phí, dễ dàng</small></b></p><p><span>♢</span><b>Chính hãng 100%<small>Hoàn tiền nếu phát hiện giả</small></b></p><p><span>⚡</span><b>Giao trong {product.delivery} ngày<small>Theo dõi theo thời gian thực</small></b></p></div>

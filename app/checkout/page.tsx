@@ -9,13 +9,21 @@ import {
   getProfile,
   saveProfile,
 } from "../lib/account";
-import { CartLine, formatPrice, getCart, saveCart } from "../lib/catalog";
+import {
+  CartLine,
+  cartLineKey,
+  formatPrice,
+  getCart,
+  saveCart,
+} from "../lib/catalog";
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [profile, setProfile] = useState<AccountProfile | null>(null);
   const [discount, setDiscount] = useState(0);
   const [orderId, setOrderId] = useState("");
+  const [shipping, setShipping] = useState("Tiêu chuẩn");
+  const [payment, setPayment] = useState("Ví điện tử");
 
   useEffect(() => {
     setCart(getCart());
@@ -30,7 +38,15 @@ export default function CheckoutPage() {
     [cart],
   );
   const appliedDiscount = Math.min(discount, subtotal);
-  const total = Math.max(0, subtotal - appliedDiscount);
+  const shippingFee =
+    shipping === "Hỏa tốc" ? 69000 : shipping === "Nhanh" ? 39000 : 0;
+  const shippingEta =
+    shipping === "Hỏa tốc"
+      ? "Trong ngày"
+      : shipping === "Nhanh"
+        ? "1–2 ngày"
+        : "2–4 ngày";
+  const total = Math.max(0, subtotal - appliedDiscount + shippingFee);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -46,6 +62,9 @@ export default function CheckoutPage() {
       customer,
       items: cart,
       payment: String(form.get("payment") ?? "Ví điện tử"),
+      shippingMethod: shipping,
+      shippingFee,
+      shippingNote: String(form.get("note") ?? ""),
       subtotal,
       discount: appliedDiscount,
       total,
@@ -70,7 +89,7 @@ export default function CheckoutPage() {
           </p>
           <div>
             <a href="/">Tiếp tục mua sắm</a>
-            <a href="/account">Theo dõi đơn hàng</a>
+            <a href={`/orders/${orderId}`}>Theo dõi đơn hàng</a>
           </div>
         </main>
         <SiteFooter />
@@ -108,17 +127,32 @@ export default function CheckoutPage() {
                   </div>
                   <label>Email<input required type="email" name="email" defaultValue={profile?.email ?? ""} placeholder="hello@example.com" /></label>
                   <label>Địa chỉ nhận hàng<textarea required name="address" defaultValue={profile?.address ?? ""} placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" /></label>
+                  <label>Ghi chú giao hàng<textarea name="note" placeholder="Ví dụ: Gọi trước khi giao, gửi tại lễ tân..." /></label>
                 </div>
               </article>
               <article>
                 <span className="step-number">2</span>
                 <div>
                   <h2>Phương thức giao hàng</h2>
-                  <label className="checkout-radio">
-                    <input type="radio" name="shipping" defaultChecked />
-                    <span>⚡</span>
-                    <b>Giao tiêu chuẩn<small>Nhận hàng trong 2–4 ngày · Miễn phí</small></b>
-                  </label>
+                  <div className="checkout-shipping-grid">
+                    {[
+                      ["Tiêu chuẩn", "2–4 ngày", "Miễn phí", "◇"],
+                      ["Nhanh", "1–2 ngày", formatPrice(39000), "⚡"],
+                      ["Hỏa tốc", "Trong ngày", formatPrice(69000), "↗"],
+                    ].map(([name, eta, fee, icon]) => (
+                      <label className="checkout-radio" key={name}>
+                        <input
+                          type="radio"
+                          name="shipping"
+                          value={name}
+                          checked={shipping === name}
+                          onChange={() => setShipping(name)}
+                        />
+                        <span>{icon}</span>
+                        <b>{name}<small>{eta} · {fee}</small></b>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </article>
               <article>
@@ -131,16 +165,31 @@ export default function CheckoutPage() {
                       ["Thẻ ngân hàng", "Visa, Mastercard", "▭"],
                       ["Chuyển khoản", "Xác nhận thủ công", "⇄"],
                       ["Khi nhận hàng", "Thanh toán COD", "⌂"],
-                    ].map(([name, note, icon], index) => (
+                    ].map(([name, note, icon]) => (
                       <label className="checkout-radio" key={name}>
-                        <input type="radio" name="payment" value={name} defaultChecked={index === 0} />
+                        <input
+                          type="radio"
+                          name="payment"
+                          value={name}
+                          checked={payment === name}
+                          onChange={() => setPayment(name)}
+                        />
                         <span>{icon}</span>
                         <b>{name}<small>{note}</small></b>
                       </label>
                     ))}
                   </div>
+                  <p className="checkout-payment-note">
+                    {payment === "Khi nhận hàng"
+                      ? "Bạn thanh toán cho đơn vị vận chuyển khi nhận đủ hàng."
+                      : "Đây là luồng mô phỏng; website không yêu cầu hoặc lưu thông tin tài chính thật."}
+                  </p>
                 </div>
               </article>
+              <label className="checkout-consent">
+                <input required type="checkbox" />
+                <span>Tôi xác nhận thông tin giao hàng và đồng ý với <a href="/policies/terms">điều khoản mua hàng</a>.</span>
+              </label>
               <button className="primary-submit">Đặt hàng · {formatPrice(total)}</button>
               <small className="demo-disclaimer">
                 Bản demo không thu thập hoặc xử lý dữ liệu thanh toán thật. Đơn
@@ -155,9 +204,9 @@ export default function CheckoutPage() {
           <h2>{cart.reduce((sum, item) => sum + item.quantity, 0)} sản phẩm</h2>
           <div>
             {cart.map((item) => (
-              <article key={item.id}>
+              <article key={cartLineKey(item)}>
                 <img src={item.image} alt={item.name} />
-                <p>{item.name}<small>Số lượng: {item.quantity}</small></p>
+                <p>{item.name}<small>{item.variant ?? "Tiêu chuẩn"} · Số lượng: {item.quantity}</small></p>
                 <b>{formatPrice(item.price * item.quantity)}</b>
               </article>
             ))}
@@ -165,7 +214,7 @@ export default function CheckoutPage() {
           <section>
             <p><span>Tạm tính</span><b>{formatPrice(subtotal)}</b></p>
             <p><span>Giảm giá</span><b className="free">− {formatPrice(appliedDiscount)}</b></p>
-            <p><span>Vận chuyển</span><b className="free">Miễn phí</b></p>
+            <p><span>Vận chuyển · {shippingEta}</span><b className={shippingFee === 0 ? "free" : ""}>{shippingFee === 0 ? "Miễn phí" : formatPrice(shippingFee)}</b></p>
             <div><span>Tổng cộng<small>Đã bao gồm VAT</small></span><strong>{formatPrice(total)}</strong></div>
           </section>
         </aside>
@@ -174,4 +223,3 @@ export default function CheckoutPage() {
     </>
   );
 }
-

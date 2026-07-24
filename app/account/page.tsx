@@ -25,7 +25,10 @@ export default function AccountPage() {
   }, []);
 
   const totalSpent = useMemo(
-    () => orders.reduce((sum, order) => sum + order.total, 0),
+    () =>
+      orders
+        .filter((order) => order.status !== "Đã hủy")
+        .reduce((sum, order) => sum + order.total, 0),
     [orders],
   );
 
@@ -88,7 +91,10 @@ export default function AccountPage() {
                   <p>{order.items[0]?.name}{order.items.length > 1 && ` +${order.items.length - 1} sản phẩm`}<small>{order.items.reduce((sum, item) => sum + item.quantity, 0)} món · {order.payment}</small></p>
                 </div>
                 <strong>{formatPrice(order.total)}</strong>
-                <span className={`account-order-status status-${order.status.replaceAll(" ", "-").toLowerCase()}`}>{order.status}</span>
+                <div className="account-order-actions">
+                  <span className={`account-order-status status-${order.status.replaceAll(" ", "-").toLowerCase()}`}>{order.status}</span>
+                  <a href={`/orders/${order.id}`}>Chi tiết →</a>
+                </div>
               </article>
             ))}
           </section>
@@ -119,4 +125,3 @@ export default function AccountPage() {
     </>
   );
 }
-

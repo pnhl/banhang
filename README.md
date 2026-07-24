@@ -22,9 +22,13 @@ Open `http://localhost:3000` after starting development.
 
 - Storefront search, filters, product details, persistent cart and wishlist.
 - Dedicated checkout with shipping and payment choices.
-- Device-local demo account, profile and order history.
-- Password-protected Seller Center with order status, inventory, analytics and
-  customer views.
+- Device-local demo account, profile, order history, order tracking,
+  cancellation and reorder.
+- Shipping speed and fees, product variants, voucher persistence and delivery
+  notes carried through the full checkout flow.
+- Password-protected Seller Center with order status, persistent demo
+  inventory, product visibility, CSV export, analytics and customer views.
+- Help center with order lookup, FAQs and a safe demo contact form.
 - Responsive Vietnamese policy, login and registration pages.
 
 The account, order, inventory and payment flows are intentionally demo-only and

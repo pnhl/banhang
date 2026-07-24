@@ -3,19 +3,44 @@
 import { useEffect, useMemo, useState } from "react";
 import { SiteFooter } from "../components/SiteFooter";
 import { SiteHeader } from "../components/SiteHeader";
-import { CartLine, formatPrice, getCart, saveCart } from "../lib/catalog";
+import {
+  CartLine,
+  cartLineKey,
+  formatPrice,
+  getCart,
+  saveCart,
+} from "../lib/catalog";
 
 export default function CartPage() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [voucher, setVoucher] = useState("");
   const [discount, setDiscount] = useState(0);
 
-  useEffect(() => setCart(getCart()), []);
+  useEffect(() => {
+    const current = getCart();
+    setCart(current);
+    if (window.sessionStorage.getItem("nova-voucher") === "NOVA50") {
+      setVoucher("NOVA50");
+      setDiscount(
+        Math.min(
+          50000,
+          current.reduce(
+            (sum, item) => sum + item.price * item.quantity,
+            0,
+          ),
+        ),
+      );
+    }
+  }, []);
   const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0), [cart]);
   const total = Math.max(0, subtotal - discount);
 
-  const update = (id: number, quantity: number) => {
-    const next = cart.map((item) => item.id === id ? { ...item, quantity } : item).filter((item) => item.quantity > 0);
+  const update = (key: string, quantity: number) => {
+    const next = cart
+      .map((item) =>
+        cartLineKey(item) === key ? { ...item, quantity } : item,
+      )
+      .filter((item) => item.quantity > 0);
     setCart(next);
     saveCart(next);
   };
@@ -39,15 +64,17 @@ export default function CartPage() {
           <div className="page-title"><div><p className="eyebrow">ĐƠN HÀNG CỦA BẠN</p><h1>Giỏ hàng</h1></div><span>{cart.reduce((sum, item) => sum + item.quantity, 0)} sản phẩm</span></div>
           {cart.length === 0 ? (
             <div className="cart-empty-page"><span>▱</span><h2>Giỏ hàng đang trống</h2><p>Khám phá các sản phẩm chọn lọc và thêm món bạn thích vào đây.</p><a href="/#products">Khám phá sản phẩm</a></div>
-          ) : cart.map((item) => (
-            <article className="cart-page-line" key={item.id}>
+          ) : cart.map((item) => {
+            const key = cartLineKey(item);
+            return (
+            <article className="cart-page-line" key={key}>
               <a href={`/product/${item.id}`}><img src={item.image} alt={item.name} /></a>
-              <div className="cart-line-copy"><p>{item.category}</p><a href={`/product/${item.id}`}>{item.name}</a><small>Phân loại: Tiêu chuẩn</small><button onClick={() => update(item.id, 0)}>Xóa</button></div>
+              <div className="cart-line-copy"><p>{item.category}</p><a href={`/product/${item.id}`}>{item.name}</a><small>Phân loại: {item.variant ?? "Tiêu chuẩn"}</small><button onClick={() => update(key, 0)}>Xóa</button></div>
               <div className="cart-line-price"><strong>{formatPrice(item.price)}</strong><del>{formatPrice(item.oldPrice)}</del></div>
-              <div className="detail-quantity"><button onClick={() => update(item.id, item.quantity - 1)}>−</button><b>{item.quantity}</b><button onClick={() => update(item.id, item.quantity + 1)}>＋</button></div>
+              <div className="detail-quantity"><button onClick={() => update(key, item.quantity - 1)} aria-label={`Giảm ${item.name}`}>−</button><b>{item.quantity}</b><button onClick={() => update(key, Math.min(10, item.quantity + 1))} aria-label={`Tăng ${item.name}`}>＋</button></div>
               <strong className="line-total">{formatPrice(item.price * item.quantity)}</strong>
             </article>
-          ))}
+          )})}
           {cart.length > 0 && <a className="continue-shopping" href="/#products">← Tiếp tục mua sắm</a>}
         </section>
 

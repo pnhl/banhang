@@ -173,6 +173,9 @@ export default function Home() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [toast, setToast] = useState("");
   const [liked, setLiked] = useState<number[]>([]);
+  const [visibleProductIds, setVisibleProductIds] = useState<number[]>(
+    products.map((product) => product.id),
+  );
 
   useEffect(() => {
     const saved = window.localStorage.getItem("nova-cart");
@@ -180,6 +183,23 @@ export default function Home() {
     const initialQuery = new URLSearchParams(window.location.search).get("q");
     if (initialQuery) setQuery(initialQuery);
     setLiked(getWishlistIds());
+    const syncVisibility = () => {
+      try {
+        const savedVisibility = JSON.parse(
+          window.localStorage.getItem("nova-admin-visibility") ?? "{}",
+        ) as Record<number, boolean>;
+        setVisibleProductIds(
+          products
+            .filter((product) => savedVisibility[product.id] !== false)
+            .map((product) => product.id),
+        );
+      } catch {
+        setVisibleProductIds(products.map((product) => product.id));
+      }
+    };
+    syncVisibility();
+    window.addEventListener("storage", syncVisibility);
+    return () => window.removeEventListener("storage", syncVisibility);
   }, []);
 
   useEffect(() => {
@@ -189,6 +209,7 @@ export default function Home() {
   const filtered = useMemo(() => {
     const result = products.filter(
       (product) =>
+        visibleProductIds.includes(product.id) &&
         (category === "Tất cả" || product.category === category) &&
         product.name.toLowerCase().includes(query.toLowerCase()) &&
         product.price <= maxPrice &&
@@ -199,7 +220,7 @@ export default function Home() {
     if (sort === "price-high") return [...result].sort((a, b) => b.price - a.price);
     if (sort === "rating") return [...result].sort((a, b) => b.rating - a.rating);
     return result;
-  }, [category, delivery, maxPrice, minRating, query, sort]);
+  }, [category, delivery, maxPrice, minRating, query, sort, visibleProductIds]);
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);

@@ -68,6 +68,7 @@ const statusOptions: OrderStatus[] = [
   "Đang đóng gói",
   "Đang giao",
   "Hoàn tất",
+  "Đã hủy",
 ];
 
 function toAdminOrder(order: NovaOrder): AdminOrder {
@@ -98,6 +99,9 @@ export function AdminDashboard() {
   const [stocks, setStocks] = useState<Record<number, number>>(() =>
     Object.fromEntries(products.map((product, index) => [product.id, index % 4 === 0 ? 8 : 42 + index * 7])),
   );
+  const [visibility, setVisibility] = useState<Record<number, boolean>>(() =>
+    Object.fromEntries(products.map((product) => [product.id, true])),
+  );
 
   useEffect(() => {
     const sync = () => {
@@ -105,6 +109,14 @@ export function AdminDashboard() {
       setOrders([...localOrders, ...seededOrders]);
     };
     sync();
+    try {
+      const savedStocks = window.localStorage.getItem("nova-admin-stocks");
+      const savedVisibility = window.localStorage.getItem("nova-admin-visibility");
+      if (savedStocks) setStocks(JSON.parse(savedStocks));
+      if (savedVisibility) setVisibility(JSON.parse(savedVisibility));
+    } catch {
+      // Keep the seeded demo inventory when browser data is unavailable.
+    }
     window.addEventListener("nova-orders-updated", sync);
     return () => window.removeEventListener("nova-orders-updated", sync);
   }, []);
@@ -138,6 +150,15 @@ export function AdminDashboard() {
       ),
     [orders],
   );
+  const visibleProducts = useMemo(
+    () =>
+      products.filter((product) =>
+        `${product.name} ${product.category} NOVA-${String(product.id).padStart(4, "0")}`
+          .toLowerCase()
+          .includes(search.toLowerCase()),
+      ),
+    [search],
+  );
 
   const flash = (text: string) => {
     setNotice(text);
@@ -157,6 +178,57 @@ export function AdminDashboard() {
       );
     }
     flash(`Đã cập nhật đơn #${id} sang “${status}”`);
+  };
+
+  const updateStock = (id: number, delta: number) => {
+    setStocks((current) => {
+      const next = {
+        ...current,
+        [id]: Math.max(0, (current[id] ?? 0) + delta),
+      };
+      window.localStorage.setItem("nova-admin-stocks", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const toggleProduct = (id: number) => {
+    setVisibility((current) => {
+      const next = { ...current, [id]: !current[id] };
+      window.localStorage.setItem(
+        "nova-admin-visibility",
+        JSON.stringify(next),
+      );
+      return next;
+    });
+    flash("Đã cập nhật trạng thái hiển thị trên trang chủ.");
+  };
+
+  const exportOrders = () => {
+    const rows = [
+      ["Mã đơn", "Khách hàng", "Email", "Sản phẩm", "Giá trị", "Trạng thái"],
+      ...visibleOrders.map((order) => [
+        order.id,
+        order.customer,
+        order.email,
+        order.product,
+        String(order.value),
+        order.status,
+      ]),
+    ];
+    const csv = rows
+      .map((row) =>
+        row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(","),
+      )
+      .join("\n");
+    const url = URL.createObjectURL(
+      new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }),
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `nova-orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    flash(`Đã xuất ${visibleOrders.length} đơn hàng.`);
   };
 
   const logout = async () => {
@@ -330,7 +402,7 @@ export function AdminDashboard() {
                 <h1>Quản lý đơn hàng</h1>
                 <p>Tìm kiếm, lọc và cập nhật trạng thái đơn hàng.</p>
               </div>
-              <button onClick={() => window.print()}>Xuất danh sách</button>
+              <button onClick={exportOrders}>Xuất CSV</button>
             </div>
             <div className="admin-filters">
               <div className="admin-global-search">
@@ -361,14 +433,25 @@ export function AdminDashboard() {
               <div>
                 <p className="eyebrow">KHO HÀNG</p>
                 <h1>Sản phẩm</h1>
-                <p>Điều chỉnh tồn kho mô phỏng cho danh mục hiện tại.</p>
+                <p>Tìm kiếm, điều chỉnh tồn kho và hiển thị trên trang chủ.</p>
               </div>
+            </div>
+            <div className="admin-filters">
+              <div className="admin-global-search">
+                ⌕
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Tìm tên, danh mục hoặc SKU"
+                />
+              </div>
+              <span>{visibleProducts.length} sản phẩm</span>
             </div>
             <div className="admin-product-table">
               <div className="admin-product-head">
-                <span>Sản phẩm</span><span>Giá bán</span><span>Tồn kho</span><span>Đã bán</span><span>Trạng thái</span>
+                <span>Sản phẩm</span><span>Giá bán</span><span>Tồn kho</span><span>Đã bán</span><span>Kho</span><span>Trang chủ</span>
               </div>
-              {products.map((product) => (
+              {visibleProducts.map((product) => (
                 <div key={product.id}>
                   <span>
                     <img src={product.image} alt="" />
@@ -376,16 +459,23 @@ export function AdminDashboard() {
                   </span>
                   <strong>{formatPrice(product.price)}</strong>
                   <span className="stock-editor">
-                    <button onClick={() => setStocks((current) => ({ ...current, [product.id]: Math.max(0, current[product.id] - 1) }))}>−</button>
+                    <button onClick={() => updateStock(product.id, -1)}>−</button>
                     <b>{stocks[product.id]}</b>
-                    <button onClick={() => setStocks((current) => ({ ...current, [product.id]: current[product.id] + 1 }))}>＋</button>
+                    <button onClick={() => updateStock(product.id, 1)}>＋</button>
                   </span>
                   <span>{product.sold}</span>
                   <b className={stocks[product.id] < 10 ? "stock-low" : "stock-ok"}>
                     {stocks[product.id] < 10 ? "Sắp hết" : "Đang bán"}
                   </b>
+                  <button
+                    className={`product-visibility ${visibility[product.id] ? "active" : ""}`}
+                    onClick={() => toggleProduct(product.id)}
+                  >
+                    {visibility[product.id] ? "Đang hiện" : "Đã ẩn"}
+                  </button>
                 </div>
               ))}
+              {visibleProducts.length === 0 && <p className="admin-empty">Không tìm thấy sản phẩm phù hợp.</p>}
             </div>
           </div>
         )}

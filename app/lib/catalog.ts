@@ -12,7 +12,10 @@ export type Product = {
   description: string;
 };
 
-export type CartLine = Product & { quantity: number };
+export type CartLine = Product & {
+  quantity: number;
+  variant?: string;
+};
 
 export const products: Product[] = [
   { id: 1, name: "Tai nghe chụp tai NovaSound Air", category: "Điện tử", price: 1290000, oldPrice: 1790000, rating: 4.9, sold: "2,1k", delivery: 2, badge: "BÁN CHẠY", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=88", description: "Chống ồn chủ động, pin 48 giờ và đệm tai memory foam êm ái cho cả ngày dài." },
@@ -44,12 +47,24 @@ export const saveCart = (cart: CartLine[]) => {
   window.dispatchEvent(new Event("nova-cart-updated"));
 };
 
-export const addProductToCart = (product: Product, quantity = 1) => {
+export const cartLineKey = (line: Pick<CartLine, "id" | "variant">) =>
+  `${line.id}:${line.variant ?? "Tiêu chuẩn"}`;
+
+export const addProductToCart = (
+  product: Product,
+  quantity = 1,
+  variant = "Tiêu chuẩn",
+) => {
   const cart = getCart();
-  const existing = cart.find((item) => item.id === product.id);
+  const key = cartLineKey({ id: product.id, variant });
+  const existing = cart.find((item) => cartLineKey(item) === key);
   const next = existing
-    ? cart.map((item) => item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item)
-    : [...cart, { ...product, quantity }];
+    ? cart.map((item) =>
+        cartLineKey(item) === key
+          ? { ...item, quantity: item.quantity + quantity }
+          : item,
+      )
+    : [...cart, { ...product, quantity, variant }];
   saveCart(next);
   return next;
 };
