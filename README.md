@@ -1,129 +1,234 @@
-# vinext-starter
+<div align="center">
+  <img src="./public/og.png" alt="NOVA Market — Món hay mỗi ngày" width="100%" />
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+  <h1>NOVA Market</h1>
 
-## Prerequisites
+  <p>
+    Trải nghiệm thương mại điện tử hiện đại dành cho thị trường Việt Nam.<br />
+    Từ khám phá sản phẩm đến thanh toán, theo dõi đơn hàng và vận hành gian hàng.
+  </p>
+
+  <p>
+    <a href="https://nova-market-vn.longphan805.chatgpt.site"><strong>Live Demo</strong></a>
+    ·
+    <a href="#chạy-dự-án"><strong>Chạy cục bộ</strong></a>
+    ·
+    <a href="#tính-năng"><strong>Tính năng</strong></a>
+  </p>
+
+  <p>
+    <img src="https://img.shields.io/badge/React-19-149ECA?style=flat-square&logo=react&logoColor=white" alt="React 19" />
+    <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript 5.9" />
+    <img src="https://img.shields.io/badge/Vinext-Cloudflare-F38020?style=flat-square&logo=cloudflare&logoColor=white" alt="Vinext on Cloudflare" />
+    <img src="https://img.shields.io/badge/Node.js-%E2%89%A522.13-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js 22.13+" />
+    <img src="https://img.shields.io/badge/UI-Responsive-173F35?style=flat-square" alt="Responsive UI" />
+  </p>
+</div>
+
+---
+
+## Tổng quan
+
+NOVA Market là một website bán hàng đa trang, tập trung vào trải nghiệm mua sắm liền mạch và giao diện tiếng Việt thân thiện trên cả máy tính lẫn thiết bị di động.
+
+Dự án mô phỏng đầy đủ hành trình của khách hàng và người vận hành:
+
+```mermaid
+flowchart LR
+    A[Khám phá & tìm kiếm] --> B[Chi tiết sản phẩm]
+    B --> C[Giỏ hàng]
+    C --> D[Thanh toán]
+    D --> E[Theo dõi đơn hàng]
+    E --> F[Hủy đơn hoặc mua lại]
+    G[Seller Center] --> H[Đơn hàng & tồn kho]
+    H --> I[Khách hàng & phân tích]
+```
+
+## Tính năng
+
+### Dành cho khách hàng
+
+| Nhóm | Khả năng |
+| --- | --- |
+| Khám phá | Tìm kiếm theo tên, lọc danh mục, giá, đánh giá và tốc độ giao hàng |
+| Sản phẩm | Trang chi tiết, biến thể màu sắc, đánh giá, thông số và sản phẩm liên quan |
+| Giỏ hàng | Lưu giỏ trên thiết bị, thay đổi số lượng, tách biến thể và áp dụng mã `NOVA50` |
+| Thanh toán | Thông tin nhận hàng, ghi chú, ba tốc độ giao hàng và bốn phương thức thanh toán mô phỏng |
+| Tài khoản | Đăng ký, đăng nhập demo, hồ sơ, lịch sử mua hàng và tổng chi tiêu |
+| Đơn hàng | Tiến trình xử lý, chi tiết thanh toán, hủy khi chờ xác nhận và mua lại |
+| Yêu thích | Lưu sản phẩm và thêm nhanh vào giỏ hàng |
+| Hỗ trợ | Tra cứu mã đơn, FAQ, chính sách và biểu mẫu liên hệ an toàn |
+
+### Dành cho quản trị viên
+
+- Đăng nhập quản trị bằng mật khẩu được kiểm tra ở phía máy chủ.
+- Phiên admin lưu trong cookie `HttpOnly`, `SameSite=Strict`.
+- Dashboard doanh thu, đơn cần xử lý, khách hàng và đánh giá gian hàng.
+- Tìm kiếm, lọc và cập nhật trạng thái đơn hàng.
+- Điều chỉnh tồn kho mô phỏng và ẩn/hiện sản phẩm trên trang chủ.
+- Xuất danh sách đơn hàng đang lọc ra CSV.
+- Phân tích giá trị đơn trung bình và tỷ lệ hoàn tất.
+
+### Trải nghiệm và an toàn
+
+- Responsive cho desktop, tablet và mobile.
+- Điều hướng mobile cố định, trạng thái rỗng và thông báo phản hồi rõ ràng.
+- Không gửi hoặc lưu mật khẩu đăng nhập demo của khách hàng.
+- Không thu thập dữ liệu thẻ hoặc thực hiện giao dịch tài chính thật.
+- Chính sách vận chuyển, đổi trả, bảo mật và điều khoản được trình bày riêng.
+
+## Các trang chính
+
+| Đường dẫn | Nội dung |
+| --- | --- |
+| `/` | Trang chủ, tìm kiếm, bộ lọc và danh sách sản phẩm |
+| `/product/:id` | Chi tiết sản phẩm và lựa chọn biến thể |
+| `/cart` | Giỏ hàng và mã ưu đãi |
+| `/checkout` | Giao hàng và thanh toán |
+| `/orders/:id` | Chi tiết, tiến trình, hủy đơn và mua lại |
+| `/wishlist` | Danh sách yêu thích |
+| `/account` | Hồ sơ và lịch sử mua hàng |
+| `/login`, `/register` | Đăng nhập và đăng ký demo |
+| `/support` | Trung tâm trợ giúp và tra cứu đơn |
+| `/policies/:slug` | Vận chuyển, đổi trả, bảo mật và điều khoản |
+| `/admin` | NOVA Seller Center có mật khẩu bảo vệ |
+
+## Công nghệ
+
+- **UI:** React 19, TypeScript, CSS thuần và React Server Components.
+- **Framework:** Vinext — triển khai mô hình Next.js trên Cloudflare Workers.
+- **Build:** Vite 8.
+- **Runtime:** Node.js `>=22.13.0`.
+- **Hosting:** OpenAI Sites / Cloudflare Workers.
+- **Dữ liệu demo:** `localStorage` và `sessionStorage`.
+- **Sẵn sàng mở rộng:** Drizzle ORM và khai báo Cloudflare D1/R2.
+
+## Chạy dự án
+
+### Yêu cầu
 
 - Node.js `>=22.13.0`
+- npm
+- Git
 
-## Quick Start
+### Cài đặt
 
 ```bash
+git clone https://github.com/pnhl/banhang.git
+cd banhang
 npm install
+```
+
+Tạo tệp `.env.local` từ `.env.example`, sau đó thay giá trị mẫu bằng mật khẩu riêng:
+
+```env
+ADMIN_PASSWORD=your-strong-private-password
+```
+
+Khởi động môi trường phát triển:
+
+```bash
 npm run dev
+```
+
+Mở [http://localhost:3000](http://localhost:3000).
+
+> Không commit `.env.local` hoặc mật khẩu thật lên GitHub.
+
+## Lệnh thường dùng
+
+| Lệnh | Mục đích |
+| --- | --- |
+| `npm run dev` | Chạy môi trường phát triển |
+| `npm run build` | Tạo bản build Cloudflare Workers |
+| `npm start` | Chạy bản build sản xuất |
+| `npm run lint` | Kiểm tra quy tắc mã nguồn |
+| `npm test` | Build và kiểm tra các trang chính |
+| `npm run db:generate` | Tạo migration Drizzle khi bổ sung schema |
+
+## Cấu trúc dự án
+
+```text
+.
+├── app/
+│   ├── admin/              # Đăng nhập và Seller Center
+│   ├── api/admin/          # API phiên quản trị
+│   ├── account/            # Hồ sơ và lịch sử mua hàng
+│   ├── cart/               # Giỏ hàng
+│   ├── checkout/           # Luồng thanh toán
+│   ├── components/         # Header và footer dùng chung
+│   ├── lib/                # Danh mục, giỏ, tài khoản và đơn hàng
+│   ├── orders/[id]/        # Theo dõi và thao tác đơn hàng
+│   ├── policies/[slug]/    # Các trang chính sách
+│   ├── product/[id]/       # Chi tiết sản phẩm
+│   ├── support/            # Trung tâm trợ giúp
+│   └── wishlist/           # Sản phẩm yêu thích
+├── public/                 # Ảnh và tài nguyên tĩnh
+├── tests/                  # Kiểm thử HTML các route chính
+├── .openai/hosting.json    # Cấu hình dự án Sites
+└── vite.config.ts          # Cấu hình Vinext/Vite
+```
+
+## Lưu trữ dữ liệu demo
+
+Phiên bản hiện tại ưu tiên khả năng trình diễn độc lập, không cần tài khoản dịch vụ bên ngoài:
+
+| Khóa | Dữ liệu |
+| --- | --- |
+| `nova-cart` | Giỏ hàng và biến thể |
+| `nova-profile` | Hồ sơ khách hàng demo |
+| `nova-orders` | Lịch sử và trạng thái đơn |
+| `nova-wishlist` | Danh sách yêu thích |
+| `nova-admin-stocks` | Tồn kho mô phỏng |
+| `nova-admin-visibility` | Trạng thái hiển thị sản phẩm |
+
+Dữ liệu này chỉ tồn tại trên trình duyệt hiện tại và có thể mất khi người dùng xóa dữ liệu website.
+
+## Đưa vào vận hành thực tế
+
+Trước khi sử dụng cho cửa hàng thật, cần thay các luồng demo bằng dịch vụ sản xuất:
+
+- Cơ sở dữ liệu D1/PostgreSQL cho sản phẩm, khách hàng và đơn hàng.
+- Xác thực người dùng thực, phân quyền và khôi phục tài khoản.
+- Tích hợp cổng thanh toán có webhook và xác minh chữ ký.
+- Quản lý tồn kho tập trung và chống bán vượt số lượng.
+- Email/SMS xác nhận, vận chuyển và chăm sóc khách hàng.
+- Theo dõi lỗi, audit log, rate limiting và chống gian lận.
+- Quản lý ảnh qua R2/CDN thay cho URL ảnh bên ngoài.
+
+## Triển khai
+
+Dự án đã được cấu hình cho OpenAI Sites thông qua `.openai/hosting.json` và tạo đầu ra Cloudflare Worker tương thích bằng:
+
+```bash
 npm run build
 ```
 
-Open `http://localhost:3000` after starting development.
+Trang demo hiện tại:
 
-## NOVA Market demo flows
+**https://nova-market-vn.longphan805.chatgpt.site**
 
-- Storefront search, filters, product details, persistent cart and wishlist.
-- Dedicated checkout with shipping and payment choices.
-- Device-local demo account, profile, order history, order tracking,
-  cancellation and reorder.
-- Shipping speed and fees, product variants, voucher persistence and delivery
-  notes carried through the full checkout flow.
-- Password-protected Seller Center with order status, persistent demo
-  inventory, product visibility, CSV export, analytics and customer views.
-- Help center with order lookup, FAQs and a safe demo contact form.
-- Responsive Vietnamese policy, login and registration pages.
+> Trạng thái public phụ thuộc vào gateway của nền tảng hosting. Nếu URL báo thiếu quyền truy cập, hãy chạy dự án cục bộ hoặc triển khai cùng mã nguồn lên một tài khoản Cloudflare/Vercel do bạn quản lý.
 
-The account, order, inventory and payment flows are intentionally demo-only and
-use browser state. They are not a substitute for production identity, payment,
-inventory or database systems.
-
-## Admin password
-
-Copy `.env.example` to `.env.local` and replace the placeholder:
+## Kiểm thử
 
 ```bash
-ADMIN_PASSWORD=your-private-admin-password
+npm run lint
+npm test
 ```
 
-Then restart the development server and open `/admin`. The password is checked
-server-side and the authenticated admin session is stored in an HTTP-only
-cookie. Never commit the real `.env.local` file.
+Bộ kiểm thử xác nhận trang chủ, các route thương mại chính và màn hình bảo vệ admin được render thành công.
 
-This starter does not use `wrangler.jsonc`.
+## Đóng góp
 
-## Included Shape
+1. Fork repository.
+2. Tạo branch theo tính năng hoặc bản sửa lỗi.
+3. Chạy `npm run lint` và `npm test`.
+4. Gửi pull request kèm mô tả thay đổi và ảnh chụp nếu có cập nhật giao diện.
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+---
 
-## Workspace Auth Headers
-
-OpenAI workspace sites can read the current user's email from
-`oai-authenticated-user-email`.
-
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
-```
-
-## Optional Dispatch-Owned ChatGPT Sign-In
-
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
-
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
-
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
-
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
-
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Useful Commands
-
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
-
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+<div align="center">
+  <strong>NOVA Market</strong><br />
+  Chọn kỹ từng món. Giao nhanh từng đơn. Mua sắm nhẹ nhàng hơn mỗi ngày.
+</div>
