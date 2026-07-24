@@ -16,6 +16,33 @@ npm run dev
 npm run build
 ```
 
+Open `http://localhost:3000` after starting development.
+
+## NOVA Market demo flows
+
+- Storefront search, filters, product details, persistent cart and wishlist.
+- Dedicated checkout with shipping and payment choices.
+- Device-local demo account, profile and order history.
+- Password-protected Seller Center with order status, inventory, analytics and
+  customer views.
+- Responsive Vietnamese policy, login and registration pages.
+
+The account, order, inventory and payment flows are intentionally demo-only and
+use browser state. They are not a substitute for production identity, payment,
+inventory or database systems.
+
+## Admin password
+
+Copy `.env.example` to `.env.local` and replace the placeholder:
+
+```bash
+ADMIN_PASSWORD=your-private-admin-password
+```
+
+Then restart the development server and open `/admin`. The password is checked
+server-side and the authenticated admin session is stored in an HTTP-only
+cookie. Never commit the real `.env.local` file.
+
 This starter does not use `wrangler.jsonc`.
 
 ## Included Shape

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { getWishlistIds, toggleWishlist } from "./lib/account";
 
 type Product = {
   id: number;
@@ -178,6 +179,7 @@ export default function Home() {
     if (saved) setCart(JSON.parse(saved));
     const initialQuery = new URLSearchParams(window.location.search).get("q");
     if (initialQuery) setQuery(initialQuery);
+    setLiked(getWishlistIds());
   }, []);
 
   useEffect(() => {
@@ -252,7 +254,8 @@ export default function Home() {
             </button>
           </div>
           <nav className="header-actions" aria-label="Tiện ích">
-            <a href="/login"><span>♙</span><small>Tài khoản</small></a>
+            <a href="/wishlist"><span>♡</span><small>Yêu thích</small>{liked.length > 0 && <b>{liked.length}</b>}</a>
+            <a href="/account"><span>♙</span><small>Tài khoản</small></a>
             <a href="/cart" className="cart-button">
               <span>▱</span><small>Giỏ hàng</small>
               {totalItems > 0 && <b>{totalItems}</b>}
@@ -394,7 +397,7 @@ export default function Home() {
                 <button
                   className={`heart ${liked.includes(product.id) ? "active" : ""}`}
                   aria-label={`Yêu thích ${product.name}`}
-                  onClick={() => setLiked((items) => items.includes(product.id) ? items.filter((id) => id !== product.id) : [...items, product.id])}
+                  onClick={() => setLiked(toggleWishlist(product.id))}
                 >
                   {liked.includes(product.id) ? "♥" : "♡"}
                 </button>
