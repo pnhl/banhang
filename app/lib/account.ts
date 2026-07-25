@@ -5,6 +5,11 @@ export type AccountProfile = {
   email: string;
   phone: string;
   address?: string;
+  addressDetail?: string;
+  provinceCode?: number;
+  province?: string;
+  wardCode?: number;
+  ward?: string;
 };
 
 export type OrderStatus =

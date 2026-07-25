@@ -55,7 +55,7 @@ flowchart LR
 | So sánh | Đặt tối đa ba sản phẩm cạnh nhau theo giá, đánh giá, giao hàng và tồn kho |
 | Cá nhân hóa | Ghi nhớ tối đa tám sản phẩm vừa xem trên thiết bị |
 | Giỏ hàng | Lưu giỏ trên thiết bị, tách biến thể, kiểm tra tồn kho và áp dụng voucher đang hoạt động |
-| Thanh toán | Thông tin nhận hàng, ghi chú, ba tốc độ giao hàng và bốn phương thức thanh toán mô phỏng |
+| Thanh toán | Chọn tỉnh/thành phố → phường/xã → địa chỉ chi tiết, ba tốc độ giao hàng và bốn phương thức thanh toán mô phỏng |
 | Tài khoản | Đăng ký, đăng nhập demo, hồ sơ, lịch sử mua hàng và tổng chi tiêu |
 | Đơn hàng | Tiến trình xử lý, hóa đơn in/PDF, hủy và hoàn tồn kho, mua lại |
 | Yêu thích | Lưu sản phẩm và thêm nhanh vào giỏ hàng |
@@ -192,6 +192,8 @@ Phiên bản hiện tại ưu tiên khả năng trình diễn độc lập, khô
 | `nova-reviews` | Đánh giá sản phẩm và trạng thái kiểm duyệt |
 | `nova-recently-viewed` | Tối đa tám sản phẩm đã xem gần đây |
 | `nova-compare` | Tối đa ba sản phẩm trong bảng so sánh |
+| `nova-location-provinces-v2` | Bộ nhớ đệm tỉnh/thành phố theo địa giới hai cấp |
+| `nova-location-wards-v2-*` | Bộ nhớ đệm phường/xã của từng tỉnh/thành phố |
 
 Khi đặt hàng thành công, tồn kho trên trình duyệt hiện tại được trừ tự động.
 Sản phẩm hết hàng không thể tăng số lượng hoặc tiếp tục thanh toán. Hủy đơn

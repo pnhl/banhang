@@ -34,12 +34,21 @@ export default function AccountPage() {
 
   const updateProfile = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!profile) return;
     const form = new FormData(event.currentTarget);
+    const addressDetail = String(form.get("addressDetail") ?? "");
     const next = {
+      ...profile,
       name: String(form.get("name") ?? ""),
       email: String(form.get("email") ?? ""),
       phone: String(form.get("phone") ?? ""),
-      address: String(form.get("address") ?? ""),
+      addressDetail,
+      address:
+        profile.province && profile.ward
+          ? [addressDetail, profile.ward, profile.province]
+              .filter(Boolean)
+              .join(", ")
+          : addressDetail,
     };
     saveProfile(next);
     setProfile(next);
@@ -105,7 +114,19 @@ export default function AccountPage() {
                 <label>Họ và tên<input name="name" required defaultValue={profile.name} /></label>
                 <label>Email<input name="email" type="email" required defaultValue={profile.email} /></label>
                 <label>Số điện thoại<input name="phone" defaultValue={profile.phone} /></label>
-                <label>Địa chỉ<textarea name="address" defaultValue={profile.address ?? ""} /></label>
+                {profile.province && (
+                  <label>
+                    Tỉnh/Thành phố
+                    <input value={profile.province} disabled />
+                  </label>
+                )}
+                {profile.ward && (
+                  <label>
+                    Phường/Xã
+                    <input value={profile.ward} disabled />
+                  </label>
+                )}
+                <label>Địa chỉ chi tiết<textarea name="addressDetail" defaultValue={profile.addressDetail ?? profile.address ?? ""} /></label>
                 <button>Lưu thay đổi</button>
               </form>
             ) : (
@@ -113,7 +134,9 @@ export default function AccountPage() {
                 <div><dt>Họ và tên</dt><dd>{profile.name}</dd></div>
                 <div><dt>Email</dt><dd>{profile.email}</dd></div>
                 <div><dt>Số điện thoại</dt><dd>{profile.phone || "Chưa cập nhật"}</dd></div>
-                <div><dt>Địa chỉ</dt><dd>{profile.address || "Chưa cập nhật"}</dd></div>
+                <div><dt>Tỉnh/Thành phố</dt><dd>{profile.province || "Chưa cập nhật"}</dd></div>
+                <div><dt>Phường/Xã</dt><dd>{profile.ward || "Chưa cập nhật"}</dd></div>
+                <div><dt>Địa chỉ chi tiết</dt><dd>{profile.addressDetail || profile.address || "Chưa cập nhật"}</dd></div>
               </dl>
             )}
             <small>Dữ liệu tài khoản demo được lưu trên trình duyệt này, không gửi lên máy chủ.</small>

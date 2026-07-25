@@ -22,6 +22,12 @@ import {
   saveCart,
   VOUCHERS_UPDATED_EVENT,
 } from "../lib/catalog";
+import {
+  loadProvinces,
+  loadWards,
+  VietnamProvince,
+  VietnamWard,
+} from "../lib/locations";
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -33,10 +39,38 @@ export default function CheckoutPage() {
   const [orderId, setOrderId] = useState("");
   const [shipping, setShipping] = useState("Tiêu chuẩn");
   const [payment, setPayment] = useState("Ví điện tử");
+  const [provinces, setProvinces] = useState<VietnamProvince[]>([]);
+  const [wards, setWards] = useState<VietnamWard[]>([]);
+  const [provinceCode, setProvinceCode] = useState("");
+  const [wardCode, setWardCode] = useState("");
+  const [manualWard, setManualWard] = useState("");
+  const [provincesLoading, setProvincesLoading] = useState(true);
+  const [wardsLoading, setWardsLoading] = useState(false);
+  const [wardFallback, setWardFallback] = useState(false);
+  const [locationNotice, setLocationNotice] = useState("");
 
   useEffect(() => {
     setCart(getCart());
-    setProfile(getProfile());
+    const storedProfile = getProfile();
+    setProfile(storedProfile);
+    setProvinceCode(
+      storedProfile?.provinceCode
+        ? String(storedProfile.provinceCode)
+        : "",
+    );
+    setWardCode(
+      storedProfile?.wardCode ? String(storedProfile.wardCode) : "",
+    );
+    setManualWard(storedProfile?.ward ?? "");
+    loadProvinces().then((result) => {
+      setProvinces(result.items);
+      setProvincesLoading(false);
+      if (result.fromFallback) {
+        setLocationNotice(
+          "Đang dùng danh sách tỉnh/thành dự phòng. Phường/xã có thể nhập thủ công nếu dịch vụ địa giới chưa phản hồi.",
+        );
+      }
+    });
     setVoucherCode(window.sessionStorage.getItem("nova-voucher") ?? "");
     const syncStocks = () =>
       setStocks(getAdminStocks(getManagedProducts()));
@@ -45,6 +79,38 @@ export default function CheckoutPage() {
     return () =>
       window.removeEventListener(PRODUCTS_UPDATED_EVENT, syncStocks);
   }, []);
+
+  useEffect(() => {
+    if (!provinceCode) {
+      setWards([]);
+      setWardFallback(false);
+      return;
+    }
+    let active = true;
+    setWardsLoading(true);
+    setWardFallback(false);
+    loadWards(Number(provinceCode)).then((result) => {
+      if (!active) return;
+      setWards(result.items);
+      setWardFallback(result.fromFallback || result.items.length === 0);
+      setWardCode((current) =>
+        result.items.some((ward) => String(ward.code) === current)
+          ? current
+          : "",
+      );
+      setWardsLoading(false);
+      if (result.fromFallback) {
+        setLocationNotice(
+          "Không tải được danh sách phường/xã. Bạn vẫn có thể nhập phường/xã thủ công.",
+        );
+      } else {
+        setLocationNotice("");
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [provinceCode]);
 
   const subtotal = useMemo(
     () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -88,11 +154,34 @@ export default function CheckoutPage() {
       return;
     }
     const form = new FormData(event.currentTarget);
+    const selectedProvince = provinces.find(
+      (province) => String(province.code) === provinceCode,
+    );
+    const selectedWard = wards.find(
+      (ward) => String(ward.code) === wardCode,
+    );
+    const wardName = wardFallback
+      ? String(form.get("manualWard") ?? "").trim()
+      : selectedWard?.name ?? "";
+    const addressDetail = String(
+      form.get("addressDetail") ?? "",
+    ).trim();
+    if (!selectedProvince || !wardName || !addressDetail) {
+      setCheckoutError(
+        "Vui lòng chọn đầy đủ tỉnh/thành phố, phường/xã và nhập địa chỉ chi tiết.",
+      );
+      return;
+    }
     const customer = {
       name: String(form.get("name") ?? ""),
       email: String(form.get("email") ?? ""),
       phone: String(form.get("phone") ?? ""),
-      address: String(form.get("address") ?? ""),
+      provinceCode: selectedProvince.code,
+      province: selectedProvince.name,
+      wardCode: selectedWard?.code,
+      ward: wardName,
+      addressDetail,
+      address: [addressDetail, wardName, selectedProvince.name].join(", "),
     };
     saveProfile(customer);
     const order = createOrder({
@@ -172,7 +261,86 @@ export default function CheckoutPage() {
                     <label>Số điện thoại<input required name="phone" defaultValue={profile?.phone ?? ""} placeholder="09xx xxx xxx" /></label>
                   </div>
                   <label>Email<input required type="email" name="email" defaultValue={profile?.email ?? ""} placeholder="hello@example.com" /></label>
-                  <label>Địa chỉ nhận hàng<textarea required name="address" defaultValue={profile?.address ?? ""} placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" /></label>
+                  <div className="checkout-location-grid">
+                    <label>
+                      Tỉnh / Thành phố
+                      <select
+                        required
+                        value={provinceCode}
+                        disabled={provincesLoading}
+                        onChange={(event) => {
+                          setProvinceCode(event.target.value);
+                          setWardCode("");
+                          setManualWard("");
+                          setCheckoutError("");
+                        }}
+                      >
+                        <option value="">
+                          {provincesLoading
+                            ? "Đang tải tỉnh/thành phố..."
+                            : "Chọn tỉnh/thành phố"}
+                        </option>
+                        {provinces.map((province) => (
+                          <option value={province.code} key={province.code}>
+                            {province.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Phường / Xã
+                      {wardFallback ? (
+                        <input
+                          required
+                          name="manualWard"
+                          value={manualWard}
+                          onChange={(event) =>
+                            setManualWard(event.target.value)
+                          }
+                          placeholder="Nhập tên phường/xã"
+                        />
+                      ) : (
+                        <select
+                          required
+                          value={wardCode}
+                          disabled={!provinceCode || wardsLoading}
+                          onChange={(event) => {
+                            setWardCode(event.target.value);
+                            setCheckoutError("");
+                          }}
+                        >
+                          <option value="">
+                            {!provinceCode
+                              ? "Chọn tỉnh/thành phố trước"
+                              : wardsLoading
+                                ? "Đang tải phường/xã..."
+                                : "Chọn phường/xã"}
+                          </option>
+                          {wards.map((ward) => (
+                            <option value={ward.code} key={ward.code}>
+                              {ward.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </label>
+                  </div>
+                  <label>
+                    Địa chỉ chi tiết
+                    <textarea
+                      required
+                      name="addressDetail"
+                      defaultValue={
+                        profile?.addressDetail ??
+                        (profile?.province ? "" : profile?.address ?? "")
+                      }
+                      placeholder="Số nhà, tên đường, tòa nhà, căn hộ..."
+                    />
+                  </label>
+                  <small className="checkout-location-note">
+                    {locationNotice ||
+                      "Địa chỉ áp dụng mô hình hành chính hai cấp: tỉnh/thành phố → phường/xã."}
+                  </small>
                   <label>Ghi chú giao hàng<textarea name="note" placeholder="Ví dụ: Gọi trước khi giao, gửi tại lễ tân..." /></label>
                 </div>
               </article>
@@ -239,8 +407,15 @@ export default function CheckoutPage() {
               {checkoutError && (
                 <p className="checkout-stock-error">{checkoutError}</p>
               )}
-              <button className="primary-submit" disabled={hasStockIssue}>
-                {hasStockIssue
+              <button
+                className="primary-submit"
+                disabled={
+                  hasStockIssue || provincesLoading || wardsLoading
+                }
+              >
+                {provincesLoading || wardsLoading
+                  ? "Đang chuẩn bị dữ liệu địa chỉ..."
+                  : hasStockIssue
                   ? "Kiểm tra lại tồn kho trong giỏ"
                   : `Đặt hàng · ${formatPrice(total)}`}
               </button>
