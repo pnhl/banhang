@@ -9,7 +9,13 @@ import {
   NovaOrder,
   OrderStatus,
 } from "../../lib/account";
-import { addProductToCart, formatPrice } from "../../lib/catalog";
+import {
+  addProductToCart,
+  formatPrice,
+  getAdminStocks,
+  getManagedProducts,
+  saveAdminStocks,
+} from "../../lib/catalog";
 
 const progress: OrderStatus[] = [
   "Chờ xác nhận",
@@ -31,8 +37,15 @@ export function OrderDetailClient({ orderId }: { orderId: string }) {
   const cancel = () => {
     const next = cancelOrder(orderId);
     if (!next) return;
+    if (order) {
+      const nextStocks = { ...getAdminStocks(getManagedProducts()) };
+      order.items.forEach((item) => {
+        nextStocks[item.id] = (nextStocks[item.id] ?? 0) + item.quantity;
+      });
+      saveAdminStocks(nextStocks);
+    }
     setOrder(next);
-    setNotice("Đơn hàng đã được hủy.");
+    setNotice("Đơn hàng đã được hủy và tồn kho đã được hoàn lại.");
   };
 
   const reorder = () => {
@@ -88,6 +101,13 @@ export function OrderDetailClient({ orderId }: { orderId: string }) {
         <a href="/">Trang chủ</a><span>›</span><a href="/account">Tài khoản</a><span>›</span><b>#{order.id}</b>
       </div>
       <main className="order-detail-page wrap">
+        <div className="invoice-print-header">
+          <div>
+            <span className="brand-mark">N</span>
+            <p><b>NOVA MARKET</b><small>HÓA ĐƠN BÁN HÀNG</small></p>
+          </div>
+          <p>Mã hóa đơn: #{order.id}</p>
+        </div>
         <header>
           <div>
             <p className="eyebrow">CHI TIẾT ĐƠN HÀNG</p>
@@ -167,8 +187,11 @@ export function OrderDetailClient({ orderId }: { orderId: string }) {
             </section>
             <div className="order-detail-actions">
               <button onClick={reorder}>Mua lại đơn hàng</button>
+              <button className="invoice-button" onClick={() => window.print()}>
+                In / lưu PDF hóa đơn
+              </button>
               {order.status === "Chờ xác nhận" && (
-                <button onClick={cancel}>Hủy đơn hàng</button>
+                <button className="cancel-button" onClick={cancel}>Hủy đơn hàng</button>
               )}
             </div>
           </aside>

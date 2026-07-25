@@ -13,6 +13,13 @@ import {
   VOUCHERS_UPDATED_EVENT,
   Voucher,
 } from "./lib/catalog";
+import {
+  COMPARE_UPDATED_EVENT,
+  getCompareIds,
+  getRecentlyViewedIds,
+  RECENTLY_VIEWED_UPDATED_EVENT,
+  toggleCompare,
+} from "./lib/engagement";
 
 type Product = {
   id: number;
@@ -170,6 +177,12 @@ const categoryIcons: Record<string, string> = {
 const formatPrice = (value: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
 
+const formatCompactPrice = (value: number) =>
+  new Intl.NumberFormat("vi-VN", {
+    notation: "compact",
+    maximumFractionDigits: 2,
+  }).format(value);
+
 export default function Home() {
   const [catalogProducts, setCatalogProducts] = useState<Product[]>(products);
   const [query, setQuery] = useState("");
@@ -186,6 +199,8 @@ export default function Home() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [toast, setToast] = useState("");
   const [liked, setLiked] = useState<number[]>([]);
+  const [compareIds, setCompareIds] = useState<number[]>([]);
+  const [recentIds, setRecentIds] = useState<number[]>([]);
   const [stocks, setStocks] = useState<Record<number, number>>(
     Object.fromEntries(products.map((product) => [product.id, 0])),
   );
@@ -231,15 +246,26 @@ export default function Home() {
         getVouchers().find((voucher) => voucher.active) ?? null;
       setFeaturedVoucher(active);
     };
+    const syncEngagement = () => {
+      setCompareIds(getCompareIds());
+      setRecentIds(getRecentlyViewedIds());
+    };
     syncCatalog();
     syncVouchers();
+    syncEngagement();
     window.addEventListener("storage", syncCatalog);
     window.addEventListener(PRODUCTS_UPDATED_EVENT, syncCatalog);
     window.addEventListener(VOUCHERS_UPDATED_EVENT, syncVouchers);
+    window.addEventListener(COMPARE_UPDATED_EVENT, syncEngagement);
+    window.addEventListener(RECENTLY_VIEWED_UPDATED_EVENT, syncEngagement);
+    window.addEventListener("storage", syncEngagement);
     return () => {
       window.removeEventListener("storage", syncCatalog);
       window.removeEventListener(PRODUCTS_UPDATED_EVENT, syncCatalog);
       window.removeEventListener(VOUCHERS_UPDATED_EVENT, syncVouchers);
+      window.removeEventListener(COMPARE_UPDATED_EVENT, syncEngagement);
+      window.removeEventListener(RECENTLY_VIEWED_UPDATED_EVENT, syncEngagement);
+      window.removeEventListener("storage", syncEngagement);
     };
   }, []);
 
@@ -273,6 +299,20 @@ export default function Home() {
       ),
     [catalogProducts],
   );
+  const categoryList = useMemo(
+    () =>
+      Array.from(
+        new Set(catalogProducts.map((product) => product.category)),
+      ),
+    [catalogProducts],
+  );
+  const recentProducts = recentIds
+    .map((id) => catalogProducts.find((product) => product.id === id))
+    .filter((product): product is Product => Boolean(product))
+    .slice(0, 6);
+  const heroProduct =
+    catalogProducts.find((product) => visibleProductIds.includes(product.id)) ??
+    products[0];
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -326,6 +366,20 @@ export default function Home() {
     document.getElementById("products")?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const toggleComparison = (product: Product) => {
+    const alreadySelected = compareIds.includes(product.id);
+    const next = toggleCompare(product.id);
+    setCompareIds(next);
+    setToast(
+      !alreadySelected && next.length === compareIds.length
+        ? "Bạn chỉ có thể so sánh tối đa 3 sản phẩm."
+        : alreadySelected
+          ? "Đã bỏ khỏi danh sách so sánh."
+          : "Đã thêm vào danh sách so sánh.",
+    );
+    window.setTimeout(() => setToast(""), 2200);
+  };
+
   return (
     <main>
       <header className="topbar">
@@ -362,6 +416,7 @@ export default function Home() {
             <button onClick={() => setQuery("Giày")}>Sneaker</button>
             <button onClick={() => setQuery("Đèn")}>Đèn bàn</button>
             <button onClick={() => setQuery("Balo")}>Balo laptop</button>
+            <a href="/compare">So sánh ({compareIds.length})</a>
           </div>
           <p>Giao nhanh 2H tại nội thành</p>
         </div>
@@ -385,22 +440,22 @@ export default function Home() {
         <div className="hero-visual" aria-label="Sản phẩm nổi bật">
           <div className="sun-disc"></div>
           <img
-            src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1000&q=90"
-            alt="Tai nghe NovaSound Air màu đen"
+            src={heroProduct.image}
+            alt={heroProduct.name}
           />
           <div className="hero-price">
             <small>Deal độc quyền</small>
-            <strong>1.290K</strong>
-            <del>1.790K</del>
+            <strong>{formatCompactPrice(heroProduct.price)}</strong>
+            <del>{formatCompactPrice(heroProduct.oldPrice)}</del>
           </div>
           <div className="floating-note">48H<br /><span>PIN</span></div>
         </div>
       </section>
 
       <section className="categories wrap" aria-label="Danh mục sản phẩm">
-        {["Điện tử", "Thời trang", "Làm đẹp", "Nhà cửa", "Phụ kiện", "Voucher"].map((item) => (
+        {[...categoryList.slice(0, 5), "Voucher"].map((item) => (
           <button key={item} onClick={() => chooseCategory(item === "Voucher" ? "Tất cả" : item)}>
-            <span>{categoryIcons[item]}</span>
+            <span>{categoryIcons[item] ?? "◇"}</span>
             <b>{item}</b>
             <small>{item === "Voucher" ? "Ưu đãi hôm nay" : `${catalogProducts.filter((p) => p.category === item).length} sản phẩm`}</small>
           </button>
@@ -434,7 +489,7 @@ export default function Home() {
           </div>
           <div className="filter-group">
             <h3>Danh mục</h3>
-            {["Tất cả", "Điện tử", "Thời trang", "Làm đẹp", "Nhà cửa", "Phụ kiện"].map((item) => (
+            {["Tất cả", ...categoryList].map((item) => (
               <label key={item}>
                 <input type="radio" name="category" checked={category === item} onChange={() => setCategory(item)} />
                 <span>{item}</span>
@@ -503,6 +558,13 @@ export default function Home() {
                 >
                   {liked.includes(product.id) ? "♥" : "♡"}
                 </button>
+                <button
+                  className={`compare-card-toggle ${compareIds.includes(product.id) ? "active" : ""}`}
+                  aria-label={`So sánh ${product.name}`}
+                  onClick={() => toggleComparison(product)}
+                >
+                  ⇄
+                </button>
                 {product.badge && <span className="badge">{product.badge}</span>}
                 <button className="product-image" onClick={() => setSelected(product)} aria-label={`Xem ${product.name}`}>
                   <img src={product.image} alt={product.name} loading="lazy" />
@@ -544,6 +606,30 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      {recentProducts.length > 0 && (
+        <section className="recent-products wrap">
+          <header>
+            <div>
+              <p className="eyebrow">TIẾP TỤC KHÁM PHÁ</p>
+              <h2>Sản phẩm bạn vừa xem</h2>
+            </div>
+            <a href="/compare">Mở bảng so sánh ({compareIds.length}) →</a>
+          </header>
+          <div>
+            {recentProducts.map((product) => (
+              <article key={product.id}>
+                <a href={`/product/${product.id}`}>
+                  <img src={product.image} alt={product.name} />
+                </a>
+                <p>{product.category}</p>
+                <a href={`/product/${product.id}`}>{product.name}</a>
+                <strong>{formatPrice(product.price)}</strong>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="service-band">
         <div className="wrap">
@@ -588,6 +674,14 @@ export default function Home() {
               <div className="variant"><b>Màu sắc</b><div><button className="active">Tiêu chuẩn</button><button>Than chì</button><button>Cát nhạt</button></div></div>
               <ul><li>✓ Sản phẩm chính hãng 100%</li><li>✓ Đổi trả miễn phí trong 15 ngày</li><li>✓ Bảo hành 12 tháng tại NOVA</li></ul>
               <a className="detail-page-link" href={`/product/${selected.id}`}>Xem trang chi tiết đầy đủ →</a>
+              <button
+                className={`quick-compare ${compareIds.includes(selected.id) ? "active" : ""}`}
+                onClick={() => toggleComparison(selected)}
+              >
+                {compareIds.includes(selected.id)
+                  ? "✓ Đang trong bảng so sánh"
+                  : "⇄ Thêm vào so sánh"}
+              </button>
               <div className="modal-actions">
                 <button disabled={(stocks[selected.id] ?? 0) === 0} onClick={() => addToCart(selected)}>
                   {(stocks[selected.id] ?? 0) === 0 ? "Tạm hết hàng" : "Thêm vào giỏ"}

@@ -37,6 +37,7 @@ test("renders the NOVA Market storefront", async () => {
 test("renders the connected commerce routes", async () => {
   const routes = [
     ["/cart", "Giỏ hàng"],
+    ["/compare", "So sánh sản phẩm"],
     ["/checkout", "Hoàn tất đơn hàng"],
     ["/orders/NV-DEMO", "Đang tải đơn hàng"],
     ["/account", "Đăng nhập để quản lý mua sắm"],

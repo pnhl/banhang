@@ -51,11 +51,13 @@ flowchart LR
 | Nhóm | Khả năng |
 | --- | --- |
 | Khám phá | Tìm kiếm theo tên, lọc danh mục, giá, đánh giá và tốc độ giao hàng |
-| Sản phẩm | Trang chi tiết, biến thể màu sắc, đánh giá, thông số và sản phẩm liên quan |
+| Sản phẩm | Trang chi tiết, biến thể, đánh giá có kiểm duyệt, thông số và sản phẩm liên quan |
+| So sánh | Đặt tối đa ba sản phẩm cạnh nhau theo giá, đánh giá, giao hàng và tồn kho |
+| Cá nhân hóa | Ghi nhớ tối đa tám sản phẩm vừa xem trên thiết bị |
 | Giỏ hàng | Lưu giỏ trên thiết bị, tách biến thể, kiểm tra tồn kho và áp dụng voucher đang hoạt động |
 | Thanh toán | Thông tin nhận hàng, ghi chú, ba tốc độ giao hàng và bốn phương thức thanh toán mô phỏng |
 | Tài khoản | Đăng ký, đăng nhập demo, hồ sơ, lịch sử mua hàng và tổng chi tiêu |
-| Đơn hàng | Tiến trình xử lý, chi tiết thanh toán, hủy khi chờ xác nhận và mua lại |
+| Đơn hàng | Tiến trình xử lý, hóa đơn in/PDF, hủy và hoàn tồn kho, mua lại |
 | Yêu thích | Lưu sản phẩm và thêm nhanh vào giỏ hàng |
 | Hỗ trợ | Tra cứu mã đơn, FAQ, chính sách và biểu mẫu liên hệ an toàn |
 
@@ -68,6 +70,7 @@ flowchart LR
 - Thêm, sửa, xóa và khôi phục danh mục sản phẩm mẫu.
 - Điều chỉnh tồn kho, ẩn/hiện sản phẩm và đồng bộ ngay ra toàn bộ gian hàng.
 - Tạo, cập nhật, bật/tạm dừng và xóa voucher theo giá trị đơn tối thiểu.
+- Duyệt, từ chối hoặc xóa đánh giá khách hàng trước khi công khai.
 - Xuất danh sách đơn hàng đang lọc ra CSV.
 - Phân tích giá trị đơn trung bình và tỷ lệ hoàn tất.
 
@@ -89,6 +92,7 @@ flowchart LR
 | `/checkout` | Giao hàng và thanh toán |
 | `/orders/:id` | Chi tiết, tiến trình, hủy đơn và mua lại |
 | `/wishlist` | Danh sách yêu thích |
+| `/compare` | Bảng so sánh tối đa ba sản phẩm |
 | `/account` | Hồ sơ và lịch sử mua hàng |
 | `/login`, `/register` | Đăng nhập và đăng ký demo |
 | `/support` | Trung tâm trợ giúp và tra cứu đơn |
@@ -185,9 +189,13 @@ Phiên bản hiện tại ưu tiên khả năng trình diễn độc lập, khô
 | `nova-admin-stocks` | Tồn kho mô phỏng |
 | `nova-admin-visibility` | Trạng thái hiển thị sản phẩm |
 | `nova-vouchers` | Danh sách và trạng thái mã ưu đãi |
+| `nova-reviews` | Đánh giá sản phẩm và trạng thái kiểm duyệt |
+| `nova-recently-viewed` | Tối đa tám sản phẩm đã xem gần đây |
+| `nova-compare` | Tối đa ba sản phẩm trong bảng so sánh |
 
 Khi đặt hàng thành công, tồn kho trên trình duyệt hiện tại được trừ tự động.
-Sản phẩm hết hàng không thể tăng số lượng hoặc tiếp tục thanh toán.
+Sản phẩm hết hàng không thể tăng số lượng hoặc tiếp tục thanh toán. Hủy đơn
+đang chờ xác nhận sẽ hoàn lại số lượng vào kho.
 
 Dữ liệu này chỉ tồn tại trên trình duyệt hiện tại và có thể mất khi người dùng xóa dữ liệu website.
 

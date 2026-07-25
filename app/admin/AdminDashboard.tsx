@@ -22,6 +22,14 @@ import {
   saveVouchers,
   Voucher,
 } from "../lib/catalog";
+import {
+  deleteReview,
+  getReviews,
+  ProductReview,
+  REVIEWS_UPDATED_EVENT,
+  ReviewStatus,
+  updateReviewStatus,
+} from "../lib/engagement";
 
 type AdminOrder = {
   id: string;
@@ -127,6 +135,7 @@ function toAdminOrder(order: NovaOrder): AdminOrder {
 export function AdminDashboard() {
   const [section, setSection] = useState("overview");
   const [orderFilter, setOrderFilter] = useState("Tất cả");
+  const [reviewFilter, setReviewFilter] = useState("Tất cả");
   const [search, setSearch] = useState("");
   const [notice, setNotice] = useState("");
   const [orders, setOrders] = useState<AdminOrder[]>(seededOrders);
@@ -139,6 +148,7 @@ export function AdminDashboard() {
   );
   const [productDraft, setProductDraft] = useState<ProductDraft | null>(null);
   const [vouchers, setVoucherState] = useState<Voucher[]>(defaultVouchers);
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [voucherDraft, setVoucherDraft] = useState({
     code: "",
     label: "",
@@ -157,8 +167,14 @@ export function AdminDashboard() {
     setStocks(getAdminStocks(catalog));
     setVisibility(getAdminVisibility(catalog));
     setVoucherState(getVouchers());
+    const syncReviews = () => setReviews(getReviews());
+    syncReviews();
     window.addEventListener("nova-orders-updated", sync);
-    return () => window.removeEventListener("nova-orders-updated", sync);
+    window.addEventListener(REVIEWS_UPDATED_EVENT, syncReviews);
+    return () => {
+      window.removeEventListener("nova-orders-updated", sync);
+      window.removeEventListener(REVIEWS_UPDATED_EVENT, syncReviews);
+    };
   }, []);
 
   const visibleOrders = useMemo(
@@ -199,6 +215,25 @@ export function AdminDashboard() {
       ),
     [managedProducts, search],
   );
+  const visibleReviews = useMemo(
+    () =>
+      reviews.filter((review) => {
+        const product = managedProducts.find(
+          (item) => item.id === review.productId,
+        );
+        const matchesFilter =
+          reviewFilter === "Tất cả" || review.status === reviewFilter;
+        const matchesSearch =
+          `${review.author} ${review.title} ${review.comment} ${product?.name ?? ""}`
+            .toLowerCase()
+            .includes(search.toLowerCase());
+        return matchesFilter && matchesSearch;
+      }),
+    [managedProducts, reviewFilter, reviews, search],
+  );
+  const pendingReviews = reviews.filter(
+    (review) => review.status === "pending",
+  ).length;
 
   const flash = (text: string) => {
     setNotice(text);
@@ -385,6 +420,22 @@ export function AdminDashboard() {
     flash(`Đã xóa mã ${code}.`);
   };
 
+  const moderateReview = (id: string, status: ReviewStatus) => {
+    const next = updateReviewStatus(id, status);
+    setReviews(next);
+    flash(
+      status === "approved"
+        ? "Đã duyệt và công khai đánh giá."
+        : "Đã từ chối hiển thị đánh giá.",
+    );
+  };
+
+  const removeReview = (id: string) => {
+    if (!window.confirm("Xóa vĩnh viễn đánh giá này trên thiết bị?")) return;
+    setReviews(deleteReview(id));
+    flash("Đã xóa đánh giá.");
+  };
+
   const exportOrders = () => {
     const rows = [
       ["Mã đơn", "Khách hàng", "Email", "Sản phẩm", "Giá trị", "Trạng thái"],
@@ -467,6 +518,13 @@ export function AdminDashboard() {
             onClick={() => setSection("promotions")}
           >
             <span>%</span>Ưu đãi
+          </button>
+          <button
+            className={section === "reviews" ? "active" : ""}
+            onClick={() => setSection("reviews")}
+          >
+            <span>★</span>Đánh giá
+            {pendingReviews > 0 && <b>{pendingReviews}</b>}
           </button>
           <button
             className={section === "customers" ? "active" : ""}
@@ -558,7 +616,7 @@ export function AdminDashboard() {
               <article className="attention-panel">
                 <div className="panel-heading">
                   <div><h2>Cần xử lý</h2><p>Các việc ưu tiên</p></div>
-                  <b>{awaiting + managedProducts.filter((product) => stocks[product.id] < 10).length}</b>
+                  <b>{awaiting + pendingReviews + managedProducts.filter((product) => stocks[product.id] < 10).length}</b>
                 </div>
                 <button onClick={() => setSection("orders")}>
                   <span className="warn">!</span>
@@ -568,6 +626,11 @@ export function AdminDashboard() {
                 <button onClick={() => setSection("products")}>
                   <span className="danger">↓</span>
                   <p><b>Sản phẩm sắp hết</b><small>Điều chỉnh tồn kho trực tiếp</small></p>
+                  <em>→</em>
+                </button>
+                <button onClick={() => setSection("reviews")}>
+                  <span className="info">★</span>
+                  <p><b>{pendingReviews} đánh giá chờ duyệt</b><small>Kiểm tra nội dung trước khi công khai</small></p>
                   <em>→</em>
                 </button>
               </article>
@@ -805,6 +868,143 @@ export function AdminDashboard() {
           </div>
         )}
 
+        {section === "reviews" && (
+          <div className="admin-content">
+            <div className="admin-heading">
+              <div>
+                <p className="eyebrow">UY TÍN GIAN HÀNG</p>
+                <h1>Kiểm duyệt đánh giá</h1>
+                <p>Duyệt nội dung khách hàng trước khi hiển thị trên trang sản phẩm.</p>
+              </div>
+            </div>
+            <div className="review-admin-metrics">
+              <article>
+                <span>Chờ duyệt</span>
+                <strong>{pendingReviews}</strong>
+              </article>
+              <article>
+                <span>Đang hiển thị</span>
+                <strong>
+                  {reviews.filter((review) => review.status === "approved").length}
+                </strong>
+              </article>
+              <article>
+                <span>Điểm trung bình</span>
+                <strong>
+                  {reviews.length
+                    ? (
+                        reviews.reduce(
+                          (sum, review) => sum + review.rating,
+                          0,
+                        ) / reviews.length
+                      ).toFixed(1)
+                    : "—"}{" "}
+                  <em>★</em>
+                </strong>
+              </article>
+            </div>
+            <div className="admin-filters">
+              <div className="admin-global-search">
+                ⌕
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Tìm khách hàng, sản phẩm hoặc nội dung"
+                />
+              </div>
+              <select
+                value={reviewFilter}
+                onChange={(event) => setReviewFilter(event.target.value)}
+              >
+                <option value="Tất cả">Tất cả trạng thái</option>
+                <option value="pending">Chờ duyệt</option>
+                <option value="approved">Đã duyệt</option>
+                <option value="rejected">Đã từ chối</option>
+              </select>
+            </div>
+            <section className="admin-review-list">
+              {visibleReviews.map((review) => {
+                const product = managedProducts.find(
+                  (item) => item.id === review.productId,
+                );
+                const statusLabel =
+                  review.status === "approved"
+                    ? "Đã duyệt"
+                    : review.status === "rejected"
+                      ? "Đã từ chối"
+                      : "Chờ duyệt";
+                return (
+                  <article key={review.id}>
+                    <div className="admin-review-product">
+                      {product ? (
+                        <img src={product.image} alt="" />
+                      ) : (
+                        <span>◇</span>
+                      )}
+                      <p>
+                        <b>{product?.name ?? "Sản phẩm đã xóa"}</b>
+                        <small>#{review.id}</small>
+                      </p>
+                    </div>
+                    <div className="admin-review-copy">
+                      <header>
+                        <div>
+                          <b>{review.author}</b>
+                          {review.verifiedPurchase && (
+                            <span>✓ Đã mua hàng</span>
+                          )}
+                        </div>
+                        <time>
+                          {new Intl.DateTimeFormat("vi-VN").format(
+                            new Date(review.createdAt),
+                          )}
+                        </time>
+                      </header>
+                      <p className="review-stars">
+                        {"★".repeat(review.rating)}
+                        {"☆".repeat(5 - review.rating)}
+                      </p>
+                      <h3>{review.title}</h3>
+                      <p>{review.comment}</p>
+                    </div>
+                    <div className="admin-review-actions">
+                      <b className={`review-status ${review.status}`}>
+                        {statusLabel}
+                      </b>
+                      {review.status !== "approved" && (
+                        <button
+                          onClick={() =>
+                            moderateReview(review.id, "approved")
+                          }
+                        >
+                          Duyệt
+                        </button>
+                      )}
+                      {review.status !== "rejected" && (
+                        <button
+                          onClick={() =>
+                            moderateReview(review.id, "rejected")
+                          }
+                        >
+                          Từ chối
+                        </button>
+                      )}
+                      <button onClick={() => removeReview(review.id)}>
+                        Xóa
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+              {visibleReviews.length === 0 && (
+                <p className="admin-empty">
+                  Không có đánh giá phù hợp với bộ lọc hiện tại.
+                </p>
+              )}
+            </section>
+          </div>
+        )}
+
         {section === "analytics" && (
           <div className="admin-content">
             <div className="admin-heading">
@@ -910,11 +1110,20 @@ export function AdminDashboard() {
                       list="nova-categories"
                     />
                     <datalist id="nova-categories">
-                      <option value="Điện tử" />
-                      <option value="Thời trang" />
-                      <option value="Làm đẹp" />
-                      <option value="Nhà cửa" />
-                      <option value="Phụ kiện" />
+                      {Array.from(
+                        new Set([
+                          "Điện tử",
+                          "Thời trang",
+                          "Làm đẹp",
+                          "Nhà cửa",
+                          "Phụ kiện",
+                          ...managedProducts.map(
+                            (product) => product.category,
+                          ),
+                        ]),
+                      ).map((category) => (
+                        <option value={category} key={category} />
+                      ))}
                     </datalist>
                   </label>
                   <label>

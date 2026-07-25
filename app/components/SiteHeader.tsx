@@ -3,16 +3,22 @@
 import { FormEvent, useEffect, useState } from "react";
 import { getProfile, getWishlistIds } from "../lib/account";
 import { getCart } from "../lib/catalog";
+import {
+  COMPARE_UPDATED_EVENT,
+  getCompareIds,
+} from "../lib/engagement";
 
 export function SiteHeader() {
   const [count, setCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
+  const [compareCount, setCompareCount] = useState(0);
   const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
     const sync = () => {
       setCount(getCart().reduce((sum, item) => sum + item.quantity, 0));
       setWishlistCount(getWishlistIds().length);
+      setCompareCount(getCompareIds().length);
       setSignedIn(Boolean(getProfile()));
     };
     sync();
@@ -20,11 +26,13 @@ export function SiteHeader() {
     window.addEventListener("nova-cart-updated", sync);
     window.addEventListener("nova-wishlist-updated", sync);
     window.addEventListener("nova-account-updated", sync);
+    window.addEventListener(COMPARE_UPDATED_EVENT, sync);
     return () => {
       window.removeEventListener("storage", sync);
       window.removeEventListener("nova-cart-updated", sync);
       window.removeEventListener("nova-wishlist-updated", sync);
       window.removeEventListener("nova-account-updated", sync);
+      window.removeEventListener(COMPARE_UPDATED_EVENT, sync);
     };
   }, []);
 
@@ -54,7 +62,7 @@ export function SiteHeader() {
           </nav>
         </div>
         <div className="site-subnav wrap">
-          <nav><a href="/">Trang chủ</a><a href="/#products">Sản phẩm</a><a href="/policies/shipping">Giao hàng</a><a href="/policies/returns">Đổi trả</a><a href="/support">Trợ giúp</a></nav>
+          <nav><a href="/">Trang chủ</a><a href="/#products">Sản phẩm</a><a href="/compare">So sánh{compareCount > 0 ? ` (${compareCount})` : ""}</a><a href="/policies/shipping">Giao hàng</a><a href="/policies/returns">Đổi trả</a><a href="/support">Trợ giúp</a></nav>
           <a href="/admin">Kênh quản trị →</a>
         </div>
       </header>
