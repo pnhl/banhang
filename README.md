@@ -52,7 +52,7 @@ flowchart LR
 | --- | --- |
 | Khám phá | Tìm kiếm theo tên, lọc danh mục, giá, đánh giá và tốc độ giao hàng |
 | Sản phẩm | Trang chi tiết, biến thể màu sắc, đánh giá, thông số và sản phẩm liên quan |
-| Giỏ hàng | Lưu giỏ trên thiết bị, thay đổi số lượng, tách biến thể và áp dụng mã `NOVA50` |
+| Giỏ hàng | Lưu giỏ trên thiết bị, tách biến thể, kiểm tra tồn kho và áp dụng voucher đang hoạt động |
 | Thanh toán | Thông tin nhận hàng, ghi chú, ba tốc độ giao hàng và bốn phương thức thanh toán mô phỏng |
 | Tài khoản | Đăng ký, đăng nhập demo, hồ sơ, lịch sử mua hàng và tổng chi tiêu |
 | Đơn hàng | Tiến trình xử lý, chi tiết thanh toán, hủy khi chờ xác nhận và mua lại |
@@ -65,7 +65,9 @@ flowchart LR
 - Phiên admin lưu trong cookie `HttpOnly`, `SameSite=Strict`.
 - Dashboard doanh thu, đơn cần xử lý, khách hàng và đánh giá gian hàng.
 - Tìm kiếm, lọc và cập nhật trạng thái đơn hàng.
-- Điều chỉnh tồn kho mô phỏng và ẩn/hiện sản phẩm trên trang chủ.
+- Thêm, sửa, xóa và khôi phục danh mục sản phẩm mẫu.
+- Điều chỉnh tồn kho, ẩn/hiện sản phẩm và đồng bộ ngay ra toàn bộ gian hàng.
+- Tạo, cập nhật, bật/tạm dừng và xóa voucher theo giá trị đơn tối thiểu.
 - Xuất danh sách đơn hàng đang lọc ra CSV.
 - Phân tích giá trị đơn trung bình và tỷ lệ hoàn tất.
 
@@ -179,8 +181,13 @@ Phiên bản hiện tại ưu tiên khả năng trình diễn độc lập, khô
 | `nova-profile` | Hồ sơ khách hàng demo |
 | `nova-orders` | Lịch sử và trạng thái đơn |
 | `nova-wishlist` | Danh sách yêu thích |
+| `nova-admin-products` | Danh mục do admin thêm hoặc chỉnh sửa |
 | `nova-admin-stocks` | Tồn kho mô phỏng |
 | `nova-admin-visibility` | Trạng thái hiển thị sản phẩm |
+| `nova-vouchers` | Danh sách và trạng thái mã ưu đãi |
+
+Khi đặt hàng thành công, tồn kho trên trình duyệt hiện tại được trừ tự động.
+Sản phẩm hết hàng không thể tăng số lượng hoặc tiếp tục thanh toán.
 
 Dữ liệu này chỉ tồn tại trên trình duyệt hiện tại và có thể mất khi người dùng xóa dữ liệu website.
 

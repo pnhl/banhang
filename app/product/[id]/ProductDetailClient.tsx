@@ -2,19 +2,110 @@
 
 import { useEffect, useState } from "react";
 import { getWishlistIds, toggleWishlist } from "../../lib/account";
-import { addProductToCart, formatPrice, Product, products } from "../../lib/catalog";
+import {
+  addProductToCart,
+  formatPrice,
+  getManagedProducts,
+  getProductStock,
+  Product,
+  products,
+  PRODUCTS_UPDATED_EVENT,
+} from "../../lib/catalog";
 
-export function ProductDetailClient({ product }: { product: Product }) {
+export function ProductDetailResolver({
+  productId,
+  initialProduct,
+}: {
+  productId: number;
+  initialProduct?: Product;
+}) {
+  const [catalog, setCatalog] = useState<Product[]>(products);
+  const [product, setProduct] = useState<Product | undefined>(initialProduct);
+  const [ready, setReady] = useState(Boolean(initialProduct));
+
+  useEffect(() => {
+    const sync = () => {
+      const managed = getManagedProducts();
+      setCatalog(managed);
+      setProduct(managed.find((item) => item.id === productId));
+      setReady(true);
+    };
+    sync();
+    window.addEventListener(PRODUCTS_UPDATED_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(PRODUCTS_UPDATED_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [productId]);
+
+  if (!ready) {
+    return (
+      <main className="product-missing wrap">
+        <span>◇</span>
+        <h1>Đang tải sản phẩm...</h1>
+      </main>
+    );
+  }
+
+  if (!product) {
+    return (
+      <main className="product-missing wrap">
+        <span>⌕</span>
+        <h1>Sản phẩm không còn hiển thị</h1>
+        <p>
+          Sản phẩm có thể đã được gỡ khỏi danh mục hoặc đường dẫn không còn
+          chính xác.
+        </p>
+        <a href="/#products">Quay lại danh sách sản phẩm</a>
+      </main>
+    );
+  }
+
+  return <ProductDetailClient product={product} catalog={catalog} />;
+}
+
+export function ProductDetailClient({
+  product,
+  catalog = products,
+}: {
+  product: Product;
+  catalog?: Product[];
+}) {
   const [quantity, setQuantity] = useState(1);
   const [tab, setTab] = useState("description");
   const [toast, setToast] = useState("");
   const [liked, setLiked] = useState(false);
   const [variant, setVariant] = useState("Cát nhạt");
-  const related = products.filter((item) => item.category === product.category && item.id !== product.id).slice(0, 3);
+  const [stock, setStock] = useState(0);
+  const related = catalog
+    .filter(
+      (item) =>
+        item.category === product.category && item.id !== product.id,
+    )
+    .slice(0, 3);
 
-  useEffect(() => setLiked(getWishlistIds().includes(product.id)), [product.id]);
+  useEffect(() => {
+    const syncStock = () => {
+      const nextStock = getProductStock(product.id);
+      setStock(nextStock);
+      setQuantity((current) =>
+        Math.max(1, Math.min(current, Math.max(1, nextStock))),
+      );
+    };
+    setLiked(getWishlistIds().includes(product.id));
+    syncStock();
+    window.addEventListener(PRODUCTS_UPDATED_EVENT, syncStock);
+    return () =>
+      window.removeEventListener(PRODUCTS_UPDATED_EVENT, syncStock);
+  }, [product.id]);
 
   const add = (buyNow = false) => {
+    if (stock === 0) {
+      setToast("Sản phẩm đang tạm hết hàng.");
+      window.setTimeout(() => setToast(""), 2200);
+      return;
+    }
     addProductToCart(product, quantity, variant);
     if (buyNow) window.location.href = "/checkout";
     else {
@@ -53,8 +144,8 @@ export function ProductDetailClient({ product }: { product: Product }) {
               ))}
             </div>
           </div>
-          <div className="detail-choice"><label>Số lượng</label><div className="detail-quantity"><button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Giảm số lượng">−</button><b>{quantity}</b><button onClick={() => setQuantity(Math.min(10, quantity + 1))} aria-label="Tăng số lượng">＋</button><span>Còn 42 sản phẩm · tối đa 10 mỗi đơn</span></div></div>
-          <div className="detail-actions"><button onClick={() => add(false)}>Thêm vào giỏ</button><button onClick={() => add(true)}>Mua ngay · {formatPrice(product.price * quantity)}</button></div>
+          <div className="detail-choice"><label>Số lượng</label><div className="detail-quantity"><button disabled={stock === 0} onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Giảm số lượng">−</button><b>{quantity}</b><button disabled={stock === 0 || quantity >= Math.min(10, stock)} onClick={() => setQuantity(Math.min(10, stock, quantity + 1))} aria-label="Tăng số lượng">＋</button><span>{stock === 0 ? "Tạm hết hàng" : `Còn ${stock} sản phẩm · tối đa ${Math.min(10, stock)} mỗi đơn`}</span></div></div>
+          <div className="detail-actions"><button disabled={stock === 0} onClick={() => add(false)}>{stock === 0 ? "Tạm hết hàng" : "Thêm vào giỏ"}</button><button disabled={stock === 0} onClick={() => add(true)}>Mua ngay · {formatPrice(product.price * quantity)}</button></div>
           <button className={`detail-wishlist ${liked ? "active" : ""}`} onClick={() => setLiked(toggleWishlist(product.id).includes(product.id))}>{liked ? "♥ Đã lưu vào yêu thích" : "♡ Lưu sản phẩm yêu thích"}</button>
           <div className="detail-benefits"><p><span>↺</span><b>Đổi trả 15 ngày<small>Miễn phí, dễ dàng</small></b></p><p><span>♢</span><b>Chính hãng 100%<small>Hoàn tiền nếu phát hiện giả</small></b></p><p><span>⚡</span><b>Giao trong {product.delivery} ngày<small>Theo dõi theo thời gian thực</small></b></p></div>
         </div>

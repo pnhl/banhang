@@ -2,6 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getWishlistIds, toggleWishlist } from "./lib/account";
+import {
+  defaultVouchers,
+  getAdminStocks,
+  getAdminVisibility,
+  getManagedProducts,
+  getVouchers,
+  PRODUCTS_UPDATED_EVENT,
+  saveCart,
+  VOUCHERS_UPDATED_EVENT,
+  Voucher,
+} from "./lib/catalog";
 
 type Product = {
   id: number;
@@ -160,6 +171,7 @@ const formatPrice = (value: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
 
 export default function Home() {
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>(products);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Tất cả");
   const [sort, setSort] = useState("popular");
@@ -168,46 +180,75 @@ export default function Home() {
   const [delivery, setDelivery] = useState(5);
   const [selected, setSelected] = useState<Product | null>(null);
   const [cart, setCart] = useState<CartLine[]>([]);
+  const [cartReady, setCartReady] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [toast, setToast] = useState("");
   const [liked, setLiked] = useState<number[]>([]);
+  const [stocks, setStocks] = useState<Record<number, number>>(
+    Object.fromEntries(products.map((product) => [product.id, 0])),
+  );
+  const [featuredVoucher, setFeaturedVoucher] = useState<Voucher | null>(
+    defaultVouchers[0],
+  );
   const [visibleProductIds, setVisibleProductIds] = useState<number[]>(
     products.map((product) => product.id),
   );
 
   useEffect(() => {
-    const saved = window.localStorage.getItem("nova-cart");
-    if (saved) setCart(JSON.parse(saved));
+    try {
+      const saved = window.localStorage.getItem("nova-cart");
+      if (saved) setCart(JSON.parse(saved));
+    } catch {
+      setCart([]);
+    }
+    setCartReady(true);
     const initialQuery = new URLSearchParams(window.location.search).get("q");
     if (initialQuery) setQuery(initialQuery);
     setLiked(getWishlistIds());
-    const syncVisibility = () => {
-      try {
-        const savedVisibility = JSON.parse(
-          window.localStorage.getItem("nova-admin-visibility") ?? "{}",
-        ) as Record<number, boolean>;
-        setVisibleProductIds(
-          products
-            .filter((product) => savedVisibility[product.id] !== false)
-            .map((product) => product.id),
-        );
-      } catch {
-        setVisibleProductIds(products.map((product) => product.id));
-      }
+    const syncCatalog = () => {
+      const managed = getManagedProducts();
+      const visibility = getAdminVisibility(managed);
+      setCatalogProducts(managed);
+      setStocks(getAdminStocks(managed));
+      setMaxPrice(
+        Math.max(
+          7000000,
+          ...managed.map((product) =>
+            Math.ceil(product.price / 100000) * 100000,
+          ),
+        ),
+      );
+      setVisibleProductIds(
+        managed
+          .filter((product) => visibility[product.id] !== false)
+          .map((product) => product.id),
+      );
     };
-    syncVisibility();
-    window.addEventListener("storage", syncVisibility);
-    return () => window.removeEventListener("storage", syncVisibility);
+    const syncVouchers = () => {
+      const active =
+        getVouchers().find((voucher) => voucher.active) ?? null;
+      setFeaturedVoucher(active);
+    };
+    syncCatalog();
+    syncVouchers();
+    window.addEventListener("storage", syncCatalog);
+    window.addEventListener(PRODUCTS_UPDATED_EVENT, syncCatalog);
+    window.addEventListener(VOUCHERS_UPDATED_EVENT, syncVouchers);
+    return () => {
+      window.removeEventListener("storage", syncCatalog);
+      window.removeEventListener(PRODUCTS_UPDATED_EVENT, syncCatalog);
+      window.removeEventListener(VOUCHERS_UPDATED_EVENT, syncVouchers);
+    };
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem("nova-cart", JSON.stringify(cart));
-  }, [cart]);
+    if (cartReady) saveCart(cart);
+  }, [cart, cartReady]);
 
   const filtered = useMemo(() => {
-    const result = products.filter(
+    const result = catalogProducts.filter(
       (product) =>
         visibleProductIds.includes(product.id) &&
         (category === "Tất cả" || product.category === category) &&
@@ -220,12 +261,35 @@ export default function Home() {
     if (sort === "price-high") return [...result].sort((a, b) => b.price - a.price);
     if (sort === "rating") return [...result].sort((a, b) => b.rating - a.rating);
     return result;
-  }, [category, delivery, maxPrice, minRating, query, sort, visibleProductIds]);
+  }, [catalogProducts, category, delivery, maxPrice, minRating, query, sort, visibleProductIds]);
+
+  const priceCeiling = useMemo(
+    () =>
+      Math.max(
+        7000000,
+        ...catalogProducts.map((product) =>
+          Math.ceil(product.price / 100000) * 100000,
+        ),
+      ),
+    [catalogProducts],
+  );
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const addToCart = (product: Product) => {
+    const stock = stocks[product.id] ?? 0;
+    const quantityInCart =
+      cart.find((item) => item.id === product.id)?.quantity ?? 0;
+    if (stock <= quantityInCart) {
+      setToast(
+        stock === 0
+          ? "Sản phẩm đang tạm hết hàng."
+          : `Chỉ còn ${stock} sản phẩm trong kho.`,
+      );
+      window.setTimeout(() => setToast(""), 2400);
+      return;
+    }
     setCart((current) => {
       const existing = current.find((item) => item.id === product.id);
       if (existing) {
@@ -243,7 +307,15 @@ export default function Home() {
     setCart((current) =>
       current
         .map((item) =>
-          item.id === id ? { ...item, quantity: Math.max(0, item.quantity + delta) } : item,
+          item.id === id
+            ? {
+                ...item,
+                quantity: Math.min(
+                  stocks[id] ?? item.quantity,
+                  Math.max(0, item.quantity + delta),
+                ),
+              }
+            : item,
         )
         .filter((item) => item.quantity > 0),
     );
@@ -330,7 +402,7 @@ export default function Home() {
           <button key={item} onClick={() => chooseCategory(item === "Voucher" ? "Tất cả" : item)}>
             <span>{categoryIcons[item]}</span>
             <b>{item}</b>
-            <small>{item === "Voucher" ? "Ưu đãi hôm nay" : `${products.filter((p) => p.category === item).length * 120}+ sản phẩm`}</small>
+            <small>{item === "Voucher" ? "Ưu đãi hôm nay" : `${catalogProducts.filter((p) => p.category === item).length} sản phẩm`}</small>
           </button>
         ))}
       </section>
@@ -341,7 +413,16 @@ export default function Home() {
           <p><b>Deal chớp nhoáng</b><small>Kết thúc trong</small></p>
           <div className="timer"><span>02</span>:<span>18</span>:<span>44</span></div>
         </div>
-        <p>Mã <strong>NOVA50</strong> giảm thêm 50K cho đơn từ 499K</p>
+        <p>
+          {featuredVoucher ? (
+            <>
+              Mã <strong>{featuredVoucher.code}</strong>{" "}
+              {featuredVoucher.label.toLowerCase()}
+            </>
+          ) : (
+            "Ưu đãi mới sẽ sớm được cập nhật"
+          )}
+        </p>
         <button onClick={() => setMaxPrice(1500000)}>Xem tất cả deal →</button>
       </section>
 
@@ -349,7 +430,7 @@ export default function Home() {
         <aside className="filters">
           <div className="filter-heading">
             <h2>Bộ lọc</h2>
-            <button onClick={() => { setCategory("Tất cả"); setMaxPrice(7000000); setMinRating(0); setDelivery(5); }}>Đặt lại</button>
+            <button onClick={() => { setCategory("Tất cả"); setMaxPrice(priceCeiling); setMinRating(0); setDelivery(5); }}>Đặt lại</button>
           </div>
           <div className="filter-group">
             <h3>Danh mục</h3>
@@ -366,7 +447,7 @@ export default function Home() {
               className="range"
               type="range"
               min="400000"
-              max="7000000"
+              max={priceCeiling}
               step="100000"
               value={maxPrice}
               onChange={(event) => setMaxPrice(Number(event.target.value))}
@@ -433,9 +514,23 @@ export default function Home() {
                   <div className="rating"><span>★</span> {product.rating} <small>· Đã bán {product.sold}</small></div>
                   <div className="price-row">
                     <div><strong>{formatPrice(product.price)}</strong><del>{formatPrice(product.oldPrice)}</del></div>
-                    <button onClick={() => addToCart(product)} aria-label={`Thêm ${product.name} vào giỏ`}>＋</button>
+                    <button
+                      disabled={(stocks[product.id] ?? 0) === 0}
+                      onClick={() => addToCart(product)}
+                      aria-label={
+                        (stocks[product.id] ?? 0) === 0
+                          ? `${product.name} đã hết hàng`
+                          : `Thêm ${product.name} vào giỏ`
+                      }
+                    >
+                      {(stocks[product.id] ?? 0) === 0 ? "×" : "＋"}
+                    </button>
                   </div>
-                  <p className="delivery">⚡ Giao trong {product.delivery === 1 ? "24 giờ" : `${product.delivery} ngày`}</p>
+                  <p className={`delivery ${(stocks[product.id] ?? 0) === 0 ? "sold-out" : ""}`}>
+                    {(stocks[product.id] ?? 0) === 0
+                      ? "Tạm hết hàng"
+                      : `⚡ Giao trong ${product.delivery === 1 ? "24 giờ" : `${product.delivery} ngày`}`}
+                  </p>
                 </div>
               </article>
             ))}
@@ -444,7 +539,7 @@ export default function Home() {
             <div className="empty-state">
               <span>⌕</span><h3>Chưa tìm thấy sản phẩm phù hợp</h3>
               <p>Thử nới rộng khoảng giá hoặc thay đổi từ khóa tìm kiếm.</p>
-              <button onClick={() => { setQuery(""); setCategory("Tất cả"); setMaxPrice(7000000); setMinRating(0); }}>Xóa bộ lọc</button>
+              <button onClick={() => { setQuery(""); setCategory("Tất cả"); setMaxPrice(priceCeiling); setMinRating(0); }}>Xóa bộ lọc</button>
             </div>
           )}
         </div>
@@ -493,7 +588,20 @@ export default function Home() {
               <div className="variant"><b>Màu sắc</b><div><button className="active">Tiêu chuẩn</button><button>Than chì</button><button>Cát nhạt</button></div></div>
               <ul><li>✓ Sản phẩm chính hãng 100%</li><li>✓ Đổi trả miễn phí trong 15 ngày</li><li>✓ Bảo hành 12 tháng tại NOVA</li></ul>
               <a className="detail-page-link" href={`/product/${selected.id}`}>Xem trang chi tiết đầy đủ →</a>
-              <div className="modal-actions"><button onClick={() => addToCart(selected)}>Thêm vào giỏ</button><button onClick={() => { addToCart(selected); window.location.href = "/cart"; }}>Mua ngay</button></div>
+              <div className="modal-actions">
+                <button disabled={(stocks[selected.id] ?? 0) === 0} onClick={() => addToCart(selected)}>
+                  {(stocks[selected.id] ?? 0) === 0 ? "Tạm hết hàng" : "Thêm vào giỏ"}
+                </button>
+                <button
+                  disabled={(stocks[selected.id] ?? 0) === 0}
+                  onClick={() => {
+                    addToCart(selected);
+                    window.location.href = "/cart";
+                  }}
+                >
+                  Mua ngay
+                </button>
+              </div>
             </div>
           </section>
         </div>

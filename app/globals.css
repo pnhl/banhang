@@ -1024,3 +1024,109 @@ footer { background: var(--ink); color: white; padding: 55px 0 20px; }
   .order-detail-page > header { flex-direction: column; }
   .order-not-found > div { flex-direction: column; }
 }
+
+/* Managed catalog, promotions and stock states */
+.price-row button:disabled,
+.modal-actions button:disabled,
+.detail-actions button:disabled,
+.detail-quantity button:disabled,
+.wishlist-grid article > button:last-child:disabled,
+.primary-submit:disabled,
+.checkout-button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+  filter: grayscale(.4);
+}
+.delivery.sold-out { color: #a24c3d; font-weight: 900; }
+.voucher-box small.error { color: #a24c3d; }
+.cart-stock-warning { display: block; margin-left: 5px; color: #a24c3d; font-size: 7px; font-weight: 800; }
+.checkout-stock-error { padding: 11px 13px; border: 1px solid #e1b9b1; border-radius: 6px; background: #fff2ef; color: #9d4434; font-size: 8px; line-height: 1.6; }
+.product-missing { min-height: 60vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.product-missing > span { color: var(--coral); font-size: 54px; }
+.product-missing h1 { margin: 12px 0 4px; font: 800 clamp(30px, 4vw, 45px) var(--font-display), serif; }
+.product-missing p { max-width: 520px; color: var(--muted); font-size: 10px; line-height: 1.7; }
+.product-missing a { margin-top: 14px; padding: 12px 17px; border-radius: 5px; background: var(--ink); color: white; font-size: 8px; font-weight: 900; }
+
+.admin-product-table > div { grid-template-columns: minmax(250px, 2fr) .8fr .8fr .55fr .7fr .72fr .68fr; }
+.admin-edit-product { min-height: 28px; border: 1px solid #d7d9d2; border-radius: 5px; background: white; color: var(--ink); font-size: 7px; font-weight: 900; cursor: pointer; }
+.admin-edit-product:hover { border-color: var(--coral); color: var(--coral); }
+
+.promotion-layout { display: grid; grid-template-columns: minmax(280px, .7fr) minmax(430px, 1.3fr); gap: 16px; align-items: start; }
+.voucher-creator,
+.voucher-list { padding: 24px; border: 1px solid #e0e1dc; border-radius: 9px; background: white; }
+.voucher-creator h2,
+.voucher-list h2 { margin: 2px 0 19px; font: 800 21px var(--font-display), serif; }
+.voucher-creator > label,
+.voucher-creator .two-col > label { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; color: #46514d; font-size: 8px; font-weight: 900; }
+.voucher-creator input { width: 100%; min-height: 41px; border: 1px solid #dfe1dc; border-radius: 5px; padding: 0 10px; background: #fbfcf9; font: inherit; outline: 0; }
+.voucher-creator input:focus { border-color: var(--coral); box-shadow: 0 0 0 3px #dc6d5812; }
+.voucher-creator .primary-submit { width: 100%; min-height: 43px; margin-top: 8px; border: 0; border-radius: 5px; background: var(--ink); color: white; font-size: 8px; font-weight: 900; cursor: pointer; }
+.voucher-creator > small { display: block; margin-top: 10px; color: var(--muted); font-size: 7px; line-height: 1.5; }
+.voucher-list > article { display: grid; grid-template-columns: minmax(190px, 1.2fr) minmax(155px, .8fr) auto; align-items: center; gap: 15px; padding: 15px 0; border-top: 1px solid #eceee9; }
+.voucher-ticket { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.voucher-ticket > span { display: grid; place-items: center; flex: 0 0 39px; height: 39px; border-radius: 8px; background: #fae5df; color: var(--coral); font: 900 17px var(--font-display), serif; }
+.voucher-ticket p { min-width: 0; display: flex; flex-direction: column; margin: 0; }
+.voucher-ticket b { font-size: 10px; letter-spacing: .5px; }
+.voucher-ticket small { margin-top: 4px; overflow: hidden; color: var(--muted); font-size: 7px; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.voucher-values { display: flex; flex-direction: column; gap: 5px; color: var(--muted); font-size: 7px; }
+.voucher-values b { color: var(--ink); }
+.voucher-actions { display: flex; align-items: center; gap: 6px; }
+.voucher-actions > button:last-child { min-height: 28px; border: 0; background: transparent; color: #a24c3d; font-size: 7px; font-weight: 900; cursor: pointer; }
+
+.admin-editor-backdrop { z-index: 120; padding: 24px; overflow-y: auto; }
+.admin-product-editor { width: min(940px, 100%); max-height: calc(100vh - 48px); overflow-y: auto; border-radius: 12px; background: white; box-shadow: 0 30px 90px #0d17145c; }
+.admin-product-editor > header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid #eceee9; background: #fff; }
+.admin-product-editor h2 { margin: 2px 0 0; font: 800 25px var(--font-display), serif; }
+.admin-product-editor > header > button { width: 34px; height: 34px; border: 1px solid #dfe1dc; border-radius: 50%; background: white; font-size: 19px; cursor: pointer; }
+.admin-editor-grid { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 25px; padding: 24px; }
+.admin-product-preview { align-self: start; position: sticky; top: 100px; overflow: hidden; border: 1px solid #e0e1dc; border-radius: 9px; background: #f7f8f4; }
+.admin-product-preview img { width: 100%; aspect-ratio: 1; object-fit: cover; background: #eceee9; }
+.admin-product-preview p { display: flex; flex-direction: column; gap: 5px; margin: 0; padding: 15px; }
+.admin-product-preview b { font: 800 14px var(--font-display), serif; }
+.admin-product-preview span { color: var(--coral); font-size: 11px; font-weight: 900; }
+.admin-product-preview small { color: var(--muted); font-size: 7px; }
+.admin-editor-fields > label,
+.admin-editor-fields .two-col > label,
+.admin-editor-fields .three-col > label { display: flex; flex-direction: column; gap: 6px; margin-bottom: 13px; color: #46514d; font-size: 8px; font-weight: 900; }
+.admin-editor-fields .two-col,
+.admin-editor-fields .three-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.admin-editor-fields .three-col { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.admin-editor-fields input,
+.admin-editor-fields textarea { width: 100%; min-height: 40px; border: 1px solid #dfe1dc; border-radius: 5px; padding: 9px 10px; background: #fbfcf9; font: inherit; outline: 0; }
+.admin-editor-fields textarea { min-height: 95px; resize: vertical; line-height: 1.6; }
+.admin-editor-fields input:focus,
+.admin-editor-fields textarea:focus { border-color: var(--coral); box-shadow: 0 0 0 3px #dc6d5812; }
+.admin-product-editor > footer { position: sticky; bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 15px; padding: 15px 24px; border-top: 1px solid #eceee9; background: white; }
+.admin-product-editor > footer > div { display: flex; gap: 8px; margin-left: auto; }
+.admin-product-editor > footer button { min-height: 37px; padding: 0 15px; border: 1px solid #d7d9d2; border-radius: 5px; background: white; color: var(--ink); font-size: 8px; font-weight: 900; cursor: pointer; }
+.admin-product-editor > footer div button:last-child { border-color: var(--ink); background: var(--ink); color: white; }
+.admin-product-editor > footer .danger-button { border-color: #e1b9b1; color: #a24c3d; }
+
+@media (max-width: 900px) {
+  .promotion-layout { grid-template-columns: 1fr; }
+  .voucher-list > article { grid-template-columns: 1fr auto; }
+  .voucher-values { grid-column: 1; }
+  .voucher-actions { grid-column: 2; grid-row: 1 / span 2; }
+  .admin-product-table > div { min-width: 1050px; }
+}
+
+@media (max-width: 700px) {
+  .admin-editor-backdrop { padding: 0; align-items: stretch; }
+  .admin-product-editor { min-height: 100vh; max-height: none; border-radius: 0; }
+  .admin-editor-grid { grid-template-columns: 1fr; padding: 18px; }
+  .admin-product-preview { position: static; display: grid; grid-template-columns: 110px 1fr; }
+  .admin-product-preview img { width: 110px; }
+  .admin-editor-fields .three-col { grid-template-columns: 1fr; gap: 0; }
+}
+
+@media (max-width: 480px) {
+  .voucher-list,
+  .voucher-creator { padding: 18px; }
+  .voucher-list > article { grid-template-columns: 1fr; }
+  .voucher-values,
+  .voucher-actions { grid-column: 1; grid-row: auto; }
+  .admin-product-editor > footer { align-items: stretch; flex-direction: column; }
+  .admin-product-editor > footer > div { width: 100%; margin-left: 0; }
+  .admin-product-editor > footer button { flex: 1; }
+  .admin-editor-fields .two-col { grid-template-columns: 1fr; gap: 0; }
+}

@@ -1,13 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import {
   getOrders,
   NovaOrder,
   OrderStatus,
   saveOrders,
 } from "../lib/account";
-import { formatPrice, products } from "../lib/catalog";
+import {
+  defaultVouchers,
+  formatPrice,
+  getAdminStocks,
+  getAdminVisibility,
+  getManagedProducts,
+  getVouchers,
+  Product,
+  products,
+  saveAdminStocks,
+  saveAdminVisibility,
+  saveManagedProducts,
+  saveVouchers,
+  Voucher,
+} from "../lib/catalog";
 
 type AdminOrder = {
   id: string;
@@ -19,6 +33,26 @@ type AdminOrder = {
   time: string;
   local: boolean;
 };
+
+type ProductDraft = Product & {
+  stock: number;
+};
+
+const createProductDraft = (): ProductDraft => ({
+  id: Date.now(),
+  name: "",
+  category: "Điện tử",
+  price: 499000,
+  oldPrice: 599000,
+  rating: 4.8,
+  sold: "0",
+  delivery: 2,
+  image:
+    "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1200&q=88",
+  badge: "MỚI",
+  description: "",
+  stock: 25,
+});
 
 const seededOrders: AdminOrder[] = [
   {
@@ -96,12 +130,21 @@ export function AdminDashboard() {
   const [search, setSearch] = useState("");
   const [notice, setNotice] = useState("");
   const [orders, setOrders] = useState<AdminOrder[]>(seededOrders);
+  const [managedProducts, setManagedProducts] = useState<Product[]>(products);
   const [stocks, setStocks] = useState<Record<number, number>>(() =>
-    Object.fromEntries(products.map((product, index) => [product.id, index % 4 === 0 ? 8 : 42 + index * 7])),
+    getAdminStocks(products),
   );
   const [visibility, setVisibility] = useState<Record<number, boolean>>(() =>
-    Object.fromEntries(products.map((product) => [product.id, true])),
+    getAdminVisibility(products),
   );
+  const [productDraft, setProductDraft] = useState<ProductDraft | null>(null);
+  const [vouchers, setVoucherState] = useState<Voucher[]>(defaultVouchers);
+  const [voucherDraft, setVoucherDraft] = useState({
+    code: "",
+    label: "",
+    discount: 50000,
+    minSubtotal: 499000,
+  });
 
   useEffect(() => {
     const sync = () => {
@@ -109,14 +152,11 @@ export function AdminDashboard() {
       setOrders([...localOrders, ...seededOrders]);
     };
     sync();
-    try {
-      const savedStocks = window.localStorage.getItem("nova-admin-stocks");
-      const savedVisibility = window.localStorage.getItem("nova-admin-visibility");
-      if (savedStocks) setStocks(JSON.parse(savedStocks));
-      if (savedVisibility) setVisibility(JSON.parse(savedVisibility));
-    } catch {
-      // Keep the seeded demo inventory when browser data is unavailable.
-    }
+    const catalog = getManagedProducts();
+    setManagedProducts(catalog);
+    setStocks(getAdminStocks(catalog));
+    setVisibility(getAdminVisibility(catalog));
+    setVoucherState(getVouchers());
     window.addEventListener("nova-orders-updated", sync);
     return () => window.removeEventListener("nova-orders-updated", sync);
   }, []);
@@ -152,12 +192,12 @@ export function AdminDashboard() {
   );
   const visibleProducts = useMemo(
     () =>
-      products.filter((product) =>
+      managedProducts.filter((product) =>
         `${product.name} ${product.category} NOVA-${String(product.id).padStart(4, "0")}`
           .toLowerCase()
           .includes(search.toLowerCase()),
       ),
-    [search],
+    [managedProducts, search],
   );
 
   const flash = (text: string) => {
@@ -186,7 +226,7 @@ export function AdminDashboard() {
         ...current,
         [id]: Math.max(0, (current[id] ?? 0) + delta),
       };
-      window.localStorage.setItem("nova-admin-stocks", JSON.stringify(next));
+      saveAdminStocks(next);
       return next;
     });
   };
@@ -194,13 +234,155 @@ export function AdminDashboard() {
   const toggleProduct = (id: number) => {
     setVisibility((current) => {
       const next = { ...current, [id]: !current[id] };
-      window.localStorage.setItem(
-        "nova-admin-visibility",
-        JSON.stringify(next),
-      );
+      saveAdminVisibility(next);
       return next;
     });
     flash("Đã cập nhật trạng thái hiển thị trên trang chủ.");
+  };
+
+  const openProductEditor = (product?: Product) => {
+    setProductDraft(
+      product
+        ? { ...product, stock: stocks[product.id] ?? 0 }
+        : createProductDraft(),
+    );
+  };
+
+  const saveProduct = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!productDraft) return;
+    const product: Product = {
+      id: productDraft.id,
+      name: productDraft.name.trim(),
+      category: productDraft.category.trim(),
+      price: Math.max(0, Number(productDraft.price)),
+      oldPrice: Math.max(
+        Number(productDraft.price),
+        Number(productDraft.oldPrice),
+      ),
+      rating: Math.min(5, Math.max(0, Number(productDraft.rating))),
+      sold: productDraft.sold.trim() || "0",
+      delivery: Math.max(1, Number(productDraft.delivery)),
+      image: productDraft.image.trim(),
+      badge: productDraft.badge?.trim() || undefined,
+      description: productDraft.description.trim(),
+    };
+    const exists = managedProducts.some((item) => item.id === product.id);
+    const nextProducts = exists
+      ? managedProducts.map((item) => (item.id === product.id ? product : item))
+      : [product, ...managedProducts];
+    const nextStocks = {
+      ...stocks,
+      [product.id]: Math.max(0, Number(productDraft.stock)),
+    };
+    const nextVisibility = {
+      ...visibility,
+      [product.id]: visibility[product.id] ?? true,
+    };
+    saveManagedProducts(nextProducts);
+    saveAdminStocks(nextStocks);
+    saveAdminVisibility(nextVisibility);
+    setManagedProducts(nextProducts);
+    setStocks(nextStocks);
+    setVisibility(nextVisibility);
+    setProductDraft(null);
+    flash(exists ? "Đã lưu thay đổi sản phẩm." : "Đã thêm sản phẩm mới.");
+  };
+
+  const deleteProduct = (id: number) => {
+    const target = managedProducts.find((product) => product.id === id);
+    if (
+      !target ||
+      !window.confirm(`Xóa “${target.name}” khỏi danh mục trên thiết bị này?`)
+    ) {
+      return;
+    }
+    const nextProducts = managedProducts.filter((product) => product.id !== id);
+    const nextStocks = { ...stocks };
+    const nextVisibility = { ...visibility };
+    delete nextStocks[id];
+    delete nextVisibility[id];
+    saveManagedProducts(nextProducts);
+    saveAdminStocks(nextStocks);
+    saveAdminVisibility(nextVisibility);
+    setManagedProducts(nextProducts);
+    setStocks(nextStocks);
+    setVisibility(nextVisibility);
+    setProductDraft(null);
+    flash("Đã xóa sản phẩm. Có thể khôi phục bằng danh mục mặc định.");
+  };
+
+  const restoreCatalog = () => {
+    if (
+      !window.confirm(
+        "Khôi phục 10 sản phẩm mẫu và thay thế danh mục đang chỉnh sửa?",
+      )
+    ) {
+      return;
+    }
+    const restoredStocks = Object.fromEntries(
+      products.map((product, index) => [
+        product.id,
+        index % 4 === 0 ? 8 : 42 + index * 7,
+      ]),
+    ) as Record<number, number>;
+    const restoredVisibility = Object.fromEntries(
+      products.map((product) => [product.id, true]),
+    ) as Record<number, boolean>;
+    saveManagedProducts(products);
+    saveAdminStocks(restoredStocks);
+    saveAdminVisibility(restoredVisibility);
+    setManagedProducts(products);
+    setStocks(restoredStocks);
+    setVisibility(restoredVisibility);
+    flash("Đã khôi phục danh mục mặc định.");
+  };
+
+  const addVoucher = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const code = voucherDraft.code.trim().toUpperCase();
+    if (!code) return;
+    const voucher: Voucher = {
+      code,
+      label:
+        voucherDraft.label.trim() ||
+        `Giảm ${formatPrice(voucherDraft.discount)} cho đơn đủ điều kiện`,
+      discount: Math.max(0, Number(voucherDraft.discount)),
+      minSubtotal: Math.max(0, Number(voucherDraft.minSubtotal)),
+      active: true,
+    };
+    const exists = vouchers.some((item) => item.code === code);
+    const next = exists
+      ? vouchers.map((item) => (item.code === code ? voucher : item))
+      : [voucher, ...vouchers];
+    saveVouchers(next);
+    setVoucherState(next);
+    setVoucherDraft({
+      code: "",
+      label: "",
+      discount: 50000,
+      minSubtotal: 499000,
+    });
+    flash(exists ? `Đã cập nhật mã ${code}.` : `Đã tạo mã ${code}.`);
+  };
+
+  const toggleVoucher = (code: string) => {
+    const next = vouchers.map((voucher) =>
+      voucher.code === code
+        ? { ...voucher, active: !voucher.active }
+        : voucher,
+    );
+    saveVouchers(next);
+    setVoucherState(next);
+    flash(`Đã cập nhật trạng thái mã ${code}.`);
+  };
+
+  const deleteVoucher = (code: string) => {
+    if (!window.confirm(`Xóa mã ưu đãi ${code}?`)) return;
+    const next = vouchers.filter((voucher) => voucher.code !== code);
+    saveVouchers(next);
+    setVoucherState(next);
+    flash(`Đã xóa mã ${code}.`);
   };
 
   const exportOrders = () => {
@@ -279,6 +461,12 @@ export function AdminDashboard() {
             onClick={() => setSection("products")}
           >
             <span>□</span>Sản phẩm
+          </button>
+          <button
+            className={section === "promotions" ? "active" : ""}
+            onClick={() => setSection("promotions")}
+          >
+            <span>%</span>Ưu đãi
           </button>
           <button
             className={section === "customers" ? "active" : ""}
@@ -370,7 +558,7 @@ export function AdminDashboard() {
               <article className="attention-panel">
                 <div className="panel-heading">
                   <div><h2>Cần xử lý</h2><p>Các việc ưu tiên</p></div>
-                  <b>{awaiting + products.filter((product) => stocks[product.id] < 10).length}</b>
+                  <b>{awaiting + managedProducts.filter((product) => stocks[product.id] < 10).length}</b>
                 </div>
                 <button onClick={() => setSection("orders")}>
                   <span className="warn">!</span>
@@ -433,7 +621,11 @@ export function AdminDashboard() {
               <div>
                 <p className="eyebrow">KHO HÀNG</p>
                 <h1>Sản phẩm</h1>
-                <p>Tìm kiếm, điều chỉnh tồn kho và hiển thị trên trang chủ.</p>
+                <p>Thêm, sửa, xóa, điều chỉnh tồn kho và hiển thị trên gian hàng.</p>
+              </div>
+              <div>
+                <button onClick={restoreCatalog}>Khôi phục mẫu</button>
+                <button onClick={() => openProductEditor()}>＋ Thêm sản phẩm</button>
               </div>
             </div>
             <div className="admin-filters">
@@ -449,7 +641,7 @@ export function AdminDashboard() {
             </div>
             <div className="admin-product-table">
               <div className="admin-product-head">
-                <span>Sản phẩm</span><span>Giá bán</span><span>Tồn kho</span><span>Đã bán</span><span>Kho</span><span>Trang chủ</span>
+                <span>Sản phẩm</span><span>Giá bán</span><span>Tồn kho</span><span>Đã bán</span><span>Kho</span><span>Trang chủ</span><span />
               </div>
               {visibleProducts.map((product) => (
                 <div key={product.id}>
@@ -473,9 +665,142 @@ export function AdminDashboard() {
                   >
                     {visibility[product.id] ? "Đang hiện" : "Đã ẩn"}
                   </button>
+                  <button
+                    className="admin-edit-product"
+                    onClick={() => openProductEditor(product)}
+                  >
+                    Chỉnh sửa
+                  </button>
                 </div>
               ))}
               {visibleProducts.length === 0 && <p className="admin-empty">Không tìm thấy sản phẩm phù hợp.</p>}
+            </div>
+          </div>
+        )}
+
+        {section === "promotions" && (
+          <div className="admin-content">
+            <div className="admin-heading">
+              <div>
+                <p className="eyebrow">TĂNG TRƯỞNG</p>
+                <h1>Mã ưu đãi</h1>
+                <p>Tạo mã giảm giá và bật hoặc tạm dừng áp dụng tại giỏ hàng.</p>
+              </div>
+            </div>
+            <div className="promotion-layout">
+              <form className="voucher-creator" onSubmit={addVoucher}>
+                <div>
+                  <p className="eyebrow">TẠO MÃ MỚI</p>
+                  <h2>Thiết lập ưu đãi</h2>
+                </div>
+                <label>
+                  Mã voucher
+                  <input
+                    required
+                    maxLength={20}
+                    value={voucherDraft.code}
+                    onChange={(event) =>
+                      setVoucherDraft((current) => ({
+                        ...current,
+                        code: event.target.value.toUpperCase().replaceAll(" ", ""),
+                      }))
+                    }
+                    placeholder="VD: SUMMER100"
+                  />
+                </label>
+                <label>
+                  Mô tả ngắn
+                  <input
+                    value={voucherDraft.label}
+                    onChange={(event) =>
+                      setVoucherDraft((current) => ({
+                        ...current,
+                        label: event.target.value,
+                      }))
+                    }
+                    placeholder="Giảm 100.000đ cho đơn mùa hè"
+                  />
+                </label>
+                <div className="two-col">
+                  <label>
+                    Số tiền giảm
+                    <input
+                      required
+                      min="0"
+                      step="1000"
+                      type="number"
+                      value={voucherDraft.discount}
+                      onChange={(event) =>
+                        setVoucherDraft((current) => ({
+                          ...current,
+                          discount: Number(event.target.value),
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Đơn tối thiểu
+                    <input
+                      required
+                      min="0"
+                      step="1000"
+                      type="number"
+                      value={voucherDraft.minSubtotal}
+                      onChange={(event) =>
+                        setVoucherDraft((current) => ({
+                          ...current,
+                          minSubtotal: Number(event.target.value),
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+                <button className="primary-submit">Tạo hoặc cập nhật mã</button>
+                <small>
+                  Dữ liệu ưu đãi được lưu trên trình duyệt của bản demo này.
+                </small>
+              </form>
+              <section className="voucher-list">
+                <div>
+                  <p className="eyebrow">ĐANG QUẢN LÝ</p>
+                  <h2>{vouchers.length} mã ưu đãi</h2>
+                </div>
+                {vouchers.map((voucher) => (
+                  <article key={voucher.code}>
+                    <div className="voucher-ticket">
+                      <span>%</span>
+                      <p>
+                        <b>{voucher.code}</b>
+                        <small>{voucher.label}</small>
+                      </p>
+                    </div>
+                    <div className="voucher-values">
+                      <span>
+                        Giảm <b>{formatPrice(voucher.discount)}</b>
+                      </span>
+                      <span>
+                        Đơn từ <b>{formatPrice(voucher.minSubtotal)}</b>
+                      </span>
+                    </div>
+                    <div className="voucher-actions">
+                      <button
+                        className={`product-visibility ${voucher.active ? "active" : ""}`}
+                        onClick={() => toggleVoucher(voucher.code)}
+                      >
+                        {voucher.active ? "Đang bật" : "Tạm dừng"}
+                      </button>
+                      <button onClick={() => deleteVoucher(voucher.code)}>
+                        Xóa
+                      </button>
+                    </div>
+                  </article>
+                ))}
+                {vouchers.length === 0 && (
+                  <p className="admin-empty">
+                    Chưa có mã ưu đãi. Tạo mã đầu tiên ở biểu mẫu bên cạnh.
+                  </p>
+                )}
+              </section>
             </div>
           </div>
         )}
@@ -488,7 +813,7 @@ export function AdminDashboard() {
             <div className="analytics-grid">
               <article><span>Giá trị đơn trung bình</span><strong>{formatPrice(orders.length ? revenue / orders.length : 0)}</strong></article>
               <article><span>Tỷ lệ hoàn tất</span><strong>{Math.round((orders.filter((order) => order.status === "Hoàn tất").length / Math.max(1, orders.length)) * 100)}%</strong></article>
-              <article><span>Sản phẩm đang bán</span><strong>{products.length}</strong></article>
+              <article><span>Sản phẩm đang bán</span><strong>{managedProducts.length}</strong></article>
             </div>
           </div>
         )}
@@ -515,6 +840,256 @@ export function AdminDashboard() {
           </div>
         )}
       </section>
+      {productDraft && (
+        <div
+          className="modal-backdrop admin-editor-backdrop"
+          onMouseDown={() => setProductDraft(null)}
+        >
+          <form
+            className="admin-product-editor"
+            onSubmit={saveProduct}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <p className="eyebrow">DANH MỤC SẢN PHẨM</p>
+                <h2>
+                  {managedProducts.some(
+                    (product) => product.id === productDraft.id,
+                  )
+                    ? "Chỉnh sửa sản phẩm"
+                    : "Thêm sản phẩm mới"}
+                </h2>
+              </div>
+              <button
+                type="button"
+                aria-label="Đóng"
+                onClick={() => setProductDraft(null)}
+              >
+                ×
+              </button>
+            </header>
+            <div className="admin-editor-grid">
+              <div className="admin-product-preview">
+                <img src={productDraft.image} alt="" />
+                <p>
+                  <b>{productDraft.name || "Tên sản phẩm"}</b>
+                  <span>{formatPrice(productDraft.price)}</span>
+                  <small>Kho: {productDraft.stock}</small>
+                </p>
+              </div>
+              <div className="admin-editor-fields">
+                <label>
+                  Tên sản phẩm
+                  <input
+                    required
+                    value={productDraft.name}
+                    onChange={(event) =>
+                      setProductDraft((current) =>
+                        current
+                          ? { ...current, name: event.target.value }
+                          : current,
+                      )
+                    }
+                    placeholder="Tên hiển thị trên cửa hàng"
+                  />
+                </label>
+                <div className="two-col">
+                  <label>
+                    Danh mục
+                    <input
+                      required
+                      value={productDraft.category}
+                      onChange={(event) =>
+                        setProductDraft((current) =>
+                          current
+                            ? { ...current, category: event.target.value }
+                            : current,
+                        )
+                      }
+                      list="nova-categories"
+                    />
+                    <datalist id="nova-categories">
+                      <option value="Điện tử" />
+                      <option value="Thời trang" />
+                      <option value="Làm đẹp" />
+                      <option value="Nhà cửa" />
+                      <option value="Phụ kiện" />
+                    </datalist>
+                  </label>
+                  <label>
+                    Nhãn nổi bật
+                    <input
+                      value={productDraft.badge ?? ""}
+                      onChange={(event) =>
+                        setProductDraft((current) =>
+                          current
+                            ? { ...current, badge: event.target.value }
+                            : current,
+                        )
+                      }
+                      placeholder="MỚI, BÁN CHẠY..."
+                    />
+                  </label>
+                </div>
+                <div className="three-col">
+                  <label>
+                    Giá bán
+                    <input
+                      required
+                      min="0"
+                      type="number"
+                      value={productDraft.price}
+                      onChange={(event) =>
+                        setProductDraft((current) =>
+                          current
+                            ? { ...current, price: Number(event.target.value) }
+                            : current,
+                        )
+                      }
+                    />
+                  </label>
+                  <label>
+                    Giá gốc
+                    <input
+                      required
+                      min="0"
+                      type="number"
+                      value={productDraft.oldPrice}
+                      onChange={(event) =>
+                        setProductDraft((current) =>
+                          current
+                            ? { ...current, oldPrice: Number(event.target.value) }
+                            : current,
+                        )
+                      }
+                    />
+                  </label>
+                  <label>
+                    Tồn kho
+                    <input
+                      required
+                      min="0"
+                      type="number"
+                      value={productDraft.stock}
+                      onChange={(event) =>
+                        setProductDraft((current) =>
+                          current
+                            ? { ...current, stock: Number(event.target.value) }
+                            : current,
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+                <div className="three-col">
+                  <label>
+                    Đánh giá
+                    <input
+                      required
+                      max="5"
+                      min="0"
+                      step="0.1"
+                      type="number"
+                      value={productDraft.rating}
+                      onChange={(event) =>
+                        setProductDraft((current) =>
+                          current
+                            ? { ...current, rating: Number(event.target.value) }
+                            : current,
+                        )
+                      }
+                    />
+                  </label>
+                  <label>
+                    Đã bán
+                    <input
+                      required
+                      value={productDraft.sold}
+                      onChange={(event) =>
+                        setProductDraft((current) =>
+                          current
+                            ? { ...current, sold: event.target.value }
+                            : current,
+                        )
+                      }
+                    />
+                  </label>
+                  <label>
+                    Giao trong (ngày)
+                    <input
+                      required
+                      min="1"
+                      type="number"
+                      value={productDraft.delivery}
+                      onChange={(event) =>
+                        setProductDraft((current) =>
+                          current
+                            ? {
+                                ...current,
+                                delivery: Number(event.target.value),
+                              }
+                            : current,
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+                <label>
+                  URL hình ảnh
+                  <input
+                    required
+                    type="url"
+                    value={productDraft.image}
+                    onChange={(event) =>
+                      setProductDraft((current) =>
+                        current
+                          ? { ...current, image: event.target.value }
+                          : current,
+                      )
+                    }
+                  />
+                </label>
+                <label>
+                  Mô tả sản phẩm
+                  <textarea
+                    required
+                    rows={4}
+                    value={productDraft.description}
+                    onChange={(event) =>
+                      setProductDraft((current) =>
+                        current
+                          ? { ...current, description: event.target.value }
+                          : current,
+                      )
+                    }
+                    placeholder="Mô tả ngắn gọn lợi ích và đặc điểm nổi bật"
+                  />
+                </label>
+              </div>
+            </div>
+            <footer>
+              {managedProducts.some(
+                (product) => product.id === productDraft.id,
+              ) && (
+                <button
+                  type="button"
+                  className="danger-button"
+                  onClick={() => deleteProduct(productDraft.id)}
+                >
+                  Xóa sản phẩm
+                </button>
+              )}
+              <div>
+                <button type="button" onClick={() => setProductDraft(null)}>
+                  Hủy
+                </button>
+                <button type="submit">Lưu và đồng bộ</button>
+              </div>
+            </footer>
+          </form>
+        </div>
+      )}
       {notice && <div className="toast"><span>✓</span>{notice}</div>}
     </main>
   );

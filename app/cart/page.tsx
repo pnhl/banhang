@@ -7,33 +7,60 @@ import {
   CartLine,
   cartLineKey,
   formatPrice,
+  getAdminStocks,
   getCart,
+  getManagedProducts,
+  getVoucherByCode,
+  PRODUCTS_UPDATED_EVENT,
   saveCart,
+  VOUCHERS_UPDATED_EVENT,
 } from "../lib/catalog";
 
 export default function CartPage() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [voucher, setVoucher] = useState("");
+  const [appliedCode, setAppliedCode] = useState("");
   const [discount, setDiscount] = useState(0);
+  const [voucherMessage, setVoucherMessage] = useState("");
+  const [stocks, setStocks] = useState<Record<number, number>>({});
 
   useEffect(() => {
     const current = getCart();
     setCart(current);
-    if (window.sessionStorage.getItem("nova-voucher") === "NOVA50") {
-      setVoucher("NOVA50");
-      setDiscount(
-        Math.min(
-          50000,
-          current.reduce(
-            (sum, item) => sum + item.price * item.quantity,
-            0,
-          ),
-        ),
-      );
-    }
+    const storedCode = window.sessionStorage.getItem("nova-voucher") ?? "";
+    setVoucher(storedCode);
+    setAppliedCode(storedCode);
+    const syncCatalog = () =>
+      setStocks(getAdminStocks(getManagedProducts()));
+    syncCatalog();
+    window.addEventListener(PRODUCTS_UPDATED_EVENT, syncCatalog);
+    return () =>
+      window.removeEventListener(PRODUCTS_UPDATED_EVENT, syncCatalog);
   }, []);
   const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0), [cart]);
   const total = Math.max(0, subtotal - discount);
+  const hasStockIssue = cart.some(
+    (item) => (stocks[item.id] ?? 0) < item.quantity,
+  );
+
+  useEffect(() => {
+    const syncVoucher = () => {
+      if (!appliedCode) {
+        setDiscount(0);
+        return;
+      }
+      const currentVoucher = getVoucherByCode(appliedCode);
+      if (!currentVoucher || subtotal < currentVoucher.minSubtotal) {
+        setDiscount(0);
+        return;
+      }
+      setDiscount(Math.min(currentVoucher.discount, subtotal));
+    };
+    syncVoucher();
+    window.addEventListener(VOUCHERS_UPDATED_EVENT, syncVoucher);
+    return () =>
+      window.removeEventListener(VOUCHERS_UPDATED_EVENT, syncVoucher);
+  }, [appliedCode, subtotal]);
 
   const update = (key: string, quantity: number) => {
     const next = cart
@@ -46,13 +73,31 @@ export default function CartPage() {
   };
 
   const applyVoucher = () => {
-    if (voucher.trim().toUpperCase() === "NOVA50") {
-      setDiscount(Math.min(50000, subtotal));
-      window.sessionStorage.setItem("nova-voucher", "NOVA50");
-    } else {
+    const code = voucher.trim().toUpperCase();
+    const selected = getVoucherByCode(code);
+    if (!selected) {
+      setAppliedCode("");
       setDiscount(0);
       window.sessionStorage.removeItem("nova-voucher");
+      setVoucherMessage("Mã không tồn tại hoặc đang tạm dừng.");
+      return;
     }
+    if (subtotal < selected.minSubtotal) {
+      setAppliedCode("");
+      setDiscount(0);
+      window.sessionStorage.removeItem("nova-voucher");
+      setVoucherMessage(
+        `Đơn hàng cần đạt ${formatPrice(selected.minSubtotal)} để dùng mã này.`,
+      );
+      return;
+    }
+    setVoucher(code);
+    setAppliedCode(code);
+    setDiscount(Math.min(selected.discount, subtotal));
+    window.sessionStorage.setItem("nova-voucher", code);
+    setVoucherMessage(
+      `✓ ${selected.label} · đã giảm ${formatPrice(selected.discount)}`,
+    );
   };
 
   return (
@@ -71,7 +116,7 @@ export default function CartPage() {
               <a href={`/product/${item.id}`}><img src={item.image} alt={item.name} /></a>
               <div className="cart-line-copy"><p>{item.category}</p><a href={`/product/${item.id}`}>{item.name}</a><small>Phân loại: {item.variant ?? "Tiêu chuẩn"}</small><button onClick={() => update(key, 0)}>Xóa</button></div>
               <div className="cart-line-price"><strong>{formatPrice(item.price)}</strong><del>{formatPrice(item.oldPrice)}</del></div>
-              <div className="detail-quantity"><button onClick={() => update(key, item.quantity - 1)} aria-label={`Giảm ${item.name}`}>−</button><b>{item.quantity}</b><button onClick={() => update(key, Math.min(10, item.quantity + 1))} aria-label={`Tăng ${item.name}`}>＋</button></div>
+              <div className="detail-quantity"><button onClick={() => update(key, item.quantity - 1)} aria-label={`Giảm ${item.name}`}>−</button><b>{item.quantity}</b><button disabled={item.quantity >= Math.min(10, stocks[item.id] ?? 0)} onClick={() => update(key, Math.min(10, stocks[item.id] ?? 0, item.quantity + 1))} aria-label={`Tăng ${item.name}`}>＋</button>{(stocks[item.id] ?? 0) < item.quantity && <span className="cart-stock-warning">Kho chỉ còn {stocks[item.id] ?? 0}</span>}</div>
               <strong className="line-total">{formatPrice(item.price * item.quantity)}</strong>
             </article>
           )})}
@@ -80,9 +125,9 @@ export default function CartPage() {
 
         <aside className="cart-order-box">
           <p className="eyebrow">TÓM TẮT ĐƠN HÀNG</p><h2>Thanh toán</h2>
-          <div className="voucher-box"><label>Mã ưu đãi</label><div><input value={voucher} onChange={(e) => setVoucher(e.target.value)} placeholder="Nhập NOVA50" /><button onClick={applyVoucher}>Áp dụng</button></div>{discount > 0 && <small>✓ Đã áp dụng ưu đãi 50.000đ</small>}</div>
+          <div className="voucher-box"><label>Mã ưu đãi</label><div><input value={voucher} onChange={(e) => setVoucher(e.target.value.toUpperCase())} placeholder="Nhập mã ưu đãi" /><button onClick={applyVoucher}>Áp dụng</button></div>{voucherMessage && <small className={discount > 0 ? "" : "error"}>{voucherMessage}</small>}</div>
           <div className="order-totals"><p><span>Tạm tính</span><b>{formatPrice(subtotal)}</b></p><p><span>Giảm giá</span><b className="free">− {formatPrice(discount)}</b></p><p><span>Phí vận chuyển</span><b className="free">Miễn phí</b></p><div><span>Tổng cộng<small>Đã bao gồm VAT</small></span><strong>{formatPrice(total)}</strong></div></div>
-          <button className="checkout-button" disabled={!cart.length} onClick={() => { window.location.href = "/checkout"; }}>Tiến hành thanh toán →</button>
+          <button className="checkout-button" disabled={!cart.length || hasStockIssue} onClick={() => { window.location.href = "/checkout"; }}>{hasStockIssue ? "Kiểm tra lại tồn kho" : "Tiến hành thanh toán →"}</button>
           <p className="secure-note">♢ Thanh toán được mã hóa và bảo vệ</p>
           <div className="accepted-payment"><span>VISA</span><span>MC</span><span>MOMO</span><span>VNPAY</span></div>
         </aside>

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { SiteFooter } from "../components/SiteFooter";
 import { SiteHeader } from "../components/SiteHeader";
 import {
@@ -13,14 +13,23 @@ import {
   CartLine,
   cartLineKey,
   formatPrice,
+  getAdminStocks,
   getCart,
+  getManagedProducts,
+  getVoucherByCode,
+  PRODUCTS_UPDATED_EVENT,
+  saveAdminStocks,
   saveCart,
+  VOUCHERS_UPDATED_EVENT,
 } from "../lib/catalog";
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [profile, setProfile] = useState<AccountProfile | null>(null);
   const [discount, setDiscount] = useState(0);
+  const [voucherCode, setVoucherCode] = useState("");
+  const [stocks, setStocks] = useState<Record<number, number>>({});
+  const [checkoutError, setCheckoutError] = useState("");
   const [orderId, setOrderId] = useState("");
   const [shipping, setShipping] = useState("Tiêu chuẩn");
   const [payment, setPayment] = useState("Ví điện tử");
@@ -28,9 +37,13 @@ export default function CheckoutPage() {
   useEffect(() => {
     setCart(getCart());
     setProfile(getProfile());
-    setDiscount(
-      window.sessionStorage.getItem("nova-voucher") === "NOVA50" ? 50000 : 0,
-    );
+    setVoucherCode(window.sessionStorage.getItem("nova-voucher") ?? "");
+    const syncStocks = () =>
+      setStocks(getAdminStocks(getManagedProducts()));
+    syncStocks();
+    window.addEventListener(PRODUCTS_UPDATED_EVENT, syncStocks);
+    return () =>
+      window.removeEventListener(PRODUCTS_UPDATED_EVENT, syncStocks);
   }, []);
 
   const subtotal = useMemo(
@@ -38,6 +51,9 @@ export default function CheckoutPage() {
     [cart],
   );
   const appliedDiscount = Math.min(discount, subtotal);
+  const hasStockIssue = cart.some(
+    (item) => (stocks[item.id] ?? 0) < item.quantity,
+  );
   const shippingFee =
     shipping === "Hỏa tốc" ? 69000 : shipping === "Nhanh" ? 39000 : 0;
   const shippingEta =
@@ -48,8 +64,29 @@ export default function CheckoutPage() {
         : "2–4 ngày";
   const total = Math.max(0, subtotal - appliedDiscount + shippingFee);
 
+  useEffect(() => {
+    const syncVoucher = () => {
+      const selected = getVoucherByCode(voucherCode);
+      setDiscount(
+        selected && subtotal >= selected.minSubtotal
+          ? Math.min(selected.discount, subtotal)
+          : 0,
+      );
+    };
+    syncVoucher();
+    window.addEventListener(VOUCHERS_UPDATED_EVENT, syncVoucher);
+    return () =>
+      window.removeEventListener(VOUCHERS_UPDATED_EVENT, syncVoucher);
+  }, [subtotal, voucherCode]);
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (hasStockIssue) {
+      setCheckoutError(
+        "Một hoặc nhiều sản phẩm không còn đủ tồn kho. Vui lòng quay lại giỏ hàng để điều chỉnh.",
+      );
+      return;
+    }
     const form = new FormData(event.currentTarget);
     const customer = {
       name: String(form.get("name") ?? ""),
@@ -69,6 +106,15 @@ export default function CheckoutPage() {
       discount: appliedDiscount,
       total,
     });
+    const nextStocks = { ...stocks };
+    cart.forEach((item) => {
+      nextStocks[item.id] = Math.max(
+        0,
+        (nextStocks[item.id] ?? 0) - item.quantity,
+      );
+    });
+    saveAdminStocks(nextStocks);
+    setStocks(nextStocks);
     saveCart([]);
     window.sessionStorage.removeItem("nova-voucher");
     setCart([]);
@@ -190,7 +236,14 @@ export default function CheckoutPage() {
                 <input required type="checkbox" />
                 <span>Tôi xác nhận thông tin giao hàng và đồng ý với <a href="/policies/terms">điều khoản mua hàng</a>.</span>
               </label>
-              <button className="primary-submit">Đặt hàng · {formatPrice(total)}</button>
+              {checkoutError && (
+                <p className="checkout-stock-error">{checkoutError}</p>
+              )}
+              <button className="primary-submit" disabled={hasStockIssue}>
+                {hasStockIssue
+                  ? "Kiểm tra lại tồn kho trong giỏ"
+                  : `Đặt hàng · ${formatPrice(total)}`}
+              </button>
               <small className="demo-disclaimer">
                 Bản demo không thu thập hoặc xử lý dữ liệu thanh toán thật. Đơn
                 hàng chỉ được lưu trên trình duyệt hiện tại.
@@ -213,7 +266,7 @@ export default function CheckoutPage() {
           </div>
           <section>
             <p><span>Tạm tính</span><b>{formatPrice(subtotal)}</b></p>
-            <p><span>Giảm giá</span><b className="free">− {formatPrice(appliedDiscount)}</b></p>
+            <p><span>Giảm giá{voucherCode ? ` · ${voucherCode}` : ""}</span><b className="free">− {formatPrice(appliedDiscount)}</b></p>
             <p><span>Vận chuyển · {shippingEta}</span><b className={shippingFee === 0 ? "free" : ""}>{shippingFee === 0 ? "Miễn phí" : formatPrice(shippingFee)}</b></p>
             <div><span>Tổng cộng<small>Đã bao gồm VAT</small></span><strong>{formatPrice(total)}</strong></div>
           </section>

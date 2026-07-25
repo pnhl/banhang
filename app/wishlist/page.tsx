@@ -4,19 +4,48 @@ import { useEffect, useState } from "react";
 import { SiteFooter } from "../components/SiteFooter";
 import { SiteHeader } from "../components/SiteHeader";
 import { getWishlistIds, toggleWishlist } from "../lib/account";
-import { addProductToCart, formatPrice, products } from "../lib/catalog";
+import {
+  addProductToCart,
+  formatPrice,
+  getAdminStocks,
+  getManagedProducts,
+  Product,
+  products,
+  PRODUCTS_UPDATED_EVENT,
+} from "../lib/catalog";
 
 export default function WishlistPage() {
   const [ids, setIds] = useState<number[]>([]);
   const [toast, setToast] = useState("");
+  const [catalog, setCatalog] = useState<Product[]>(products);
+  const [stocks, setStocks] = useState<Record<number, number>>({});
 
-  useEffect(() => setIds(getWishlistIds()), []);
-  const wished = products.filter((product) => ids.includes(product.id));
+  useEffect(() => {
+    const sync = () => {
+      const managed = getManagedProducts();
+      setCatalog(managed);
+      setStocks(getAdminStocks(managed));
+    };
+    setIds(getWishlistIds());
+    sync();
+    window.addEventListener(PRODUCTS_UPDATED_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(PRODUCTS_UPDATED_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+  const wished = catalog.filter((product) => ids.includes(product.id));
 
   const remove = (id: number) => setIds(toggleWishlist(id));
   const add = (id: number) => {
-    const product = products.find((item) => item.id === id);
+    const product = catalog.find((item) => item.id === id);
     if (!product) return;
+    if ((stocks[id] ?? 0) === 0) {
+      setToast("Sản phẩm đang tạm hết hàng.");
+      window.setTimeout(() => setToast(""), 2200);
+      return;
+    }
     addProductToCart(product);
     setToast(`Đã thêm “${product.name}” vào giỏ`);
     window.setTimeout(() => setToast(""), 2200);
@@ -39,7 +68,14 @@ export default function WishlistPage() {
                 <p>{product.category}</p>
                 <a href={`/product/${product.id}`}>{product.name}</a>
                 <div><strong>{formatPrice(product.price)}</strong><del>{formatPrice(product.oldPrice)}</del></div>
-                <button onClick={() => add(product.id)}>Thêm vào giỏ</button>
+                <button
+                  disabled={(stocks[product.id] ?? 0) === 0}
+                  onClick={() => add(product.id)}
+                >
+                  {(stocks[product.id] ?? 0) === 0
+                    ? "Tạm hết hàng"
+                    : "Thêm vào giỏ"}
+                </button>
               </article>
             ))}
           </section>

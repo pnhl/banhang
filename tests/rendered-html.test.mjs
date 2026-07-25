@@ -45,6 +45,7 @@ test("renders the connected commerce routes", async () => {
     ["/login", "Đăng nhập"],
     ["/register", "Đăng ký thành viên"],
     ["/product/1", "Tai nghe chụp tai NovaSound Air"],
+    ["/product/999999", "Đang tải sản phẩm"],
     ["/policies/shipping", "Chính sách vận chuyển"],
   ];
 
