@@ -1,4 +1,7 @@
 import type { CartLine } from "./catalog";
+import type { BusinessProfile } from "./invoicing";
+import { createInvoiceNumber } from "./invoicing";
+import type { SellerAllocation } from "./marketplace";
 
 export type AccountProfile = {
   name: string;
@@ -32,6 +35,14 @@ export type NovaOrder = {
   discount: number;
   total: number;
   status: OrderStatus;
+  voucherCode?: string;
+  amountBeforeTax?: number;
+  taxAmount?: number;
+  invoiceNumber?: string;
+  invoiceStatus?: "draft" | "issued-demo" | "provider-confirmed";
+  business?: BusinessProfile;
+  sellerAllocations?: SellerAllocation[];
+  serverPersisted?: boolean;
 };
 
 const PROFILE_KEY = "nova-profile";
@@ -87,6 +98,8 @@ export function createOrder(
     id,
     createdAt: now.toISOString(),
     status: "Chờ xác nhận",
+    invoiceNumber: order.invoiceNumber ?? createInvoiceNumber(id, now),
+    invoiceStatus: order.invoiceStatus ?? "issued-demo",
   };
   saveOrders([next, ...getOrders()]);
   return next;

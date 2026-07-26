@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useEffect, useState } from "react";
+import { trackCommerceEvent } from "../../lib/analytics";
 import {
   getProfile,
   getWishlistIds,
@@ -25,6 +26,7 @@ import {
   submitReview,
   toggleCompare,
 } from "../../lib/engagement";
+import { getSellerForProduct } from "../../lib/marketplace";
 
 export function ProductDetailResolver({
   productId,
@@ -108,6 +110,7 @@ export function ProductDetailClient({
         item.category === product.category && item.id !== product.id,
     )
     .slice(0, 3);
+  const seller = getSellerForProduct(product.id);
 
   useEffect(() => {
     const syncStock = () => {
@@ -131,6 +134,21 @@ export function ProductDetailClient({
     syncReviews();
     syncCompare();
     addRecentlyViewed(product.id);
+    trackCommerceEvent("view_item", {
+      currency: "VND",
+      value: product.price,
+      seller_id: seller.id,
+      items: [
+        {
+          item_id: String(product.id),
+          item_name: product.name,
+          item_category: product.category,
+          item_brand: seller.name,
+          price: product.price,
+          quantity: 1,
+        },
+      ],
+    });
     window.addEventListener(PRODUCTS_UPDATED_EVENT, syncStock);
     window.addEventListener(REVIEWS_UPDATED_EVENT, syncReviews);
     window.addEventListener(COMPARE_UPDATED_EVENT, syncCompare);
@@ -143,7 +161,14 @@ export function ProductDetailClient({
       window.removeEventListener("storage", syncReviews);
       window.removeEventListener("storage", syncCompare);
     };
-  }, [product.id]);
+  }, [
+    product.category,
+    product.id,
+    product.name,
+    product.price,
+    seller.id,
+    seller.name,
+  ]);
 
   const reviewAverage = reviews.length
     ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
@@ -156,6 +181,22 @@ export function ProductDetailClient({
       return;
     }
     addProductToCart(product, quantity, variant);
+    trackCommerceEvent("add_to_cart", {
+      currency: "VND",
+      value: product.price * quantity,
+      seller_id: seller.id,
+      items: [
+        {
+          item_id: String(product.id),
+          item_name: product.name,
+          item_category: product.category,
+          item_brand: seller.name,
+          item_variant: variant,
+          price: product.price,
+          quantity,
+        },
+      ],
+    });
     if (buyNow) window.location.href = "/checkout";
     else {
       setToast(`Đã thêm ${quantity} sản phẩm · ${variant} vào giỏ`);
@@ -233,6 +274,15 @@ export function ProductDetailClient({
             </button>
           </div>
           <div className="detail-benefits"><p><span>↺</span><b>Đổi trả 15 ngày<small>Miễn phí, dễ dàng</small></b></p><p><span>♢</span><b>Chính hãng 100%<small>Hoàn tiền nếu phát hiện giả</small></b></p><p><span>⚡</span><b>Giao trong {product.delivery} ngày<small>Theo dõi theo thời gian thực</small></b></p></div>
+          <a className="product-seller-card" href={`/store/${seller.slug}`}>
+            <span style={{ background: seller.accent }}>{seller.shortName}</span>
+            <p>
+              <small>Bán và chịu trách nhiệm bởi</small>
+              <b>{seller.name} {seller.verified && "✓"}</b>
+              <em>★ {seller.rating} · Phản hồi {seller.responseRate}%</em>
+            </p>
+            <strong>Xem gian hàng →</strong>
+          </a>
         </div>
       </section>
 

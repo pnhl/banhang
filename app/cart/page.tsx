@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { SiteFooter } from "../components/SiteFooter";
 import { SiteHeader } from "../components/SiteHeader";
+import { getProfile } from "../lib/account";
+import { trackCommerceEvent } from "../lib/analytics";
 import {
   CartLine,
   cartLineKey,
@@ -10,11 +12,12 @@ import {
   getAdminStocks,
   getCart,
   getManagedProducts,
-  getVoucherByCode,
   PRODUCTS_UPDATED_EVENT,
   saveCart,
+  validateVoucher,
   VOUCHERS_UPDATED_EVENT,
 } from "../lib/catalog";
+import { getSellerSubtotals } from "../lib/marketplace";
 
 export default function CartPage() {
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -30,6 +33,21 @@ export default function CartPage() {
     const storedCode = window.sessionStorage.getItem("nova-voucher") ?? "";
     setVoucher(storedCode);
     setAppliedCode(storedCode);
+    trackCommerceEvent("view_cart", {
+      currency: "VND",
+      value: current.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0,
+      ),
+      items: current.map((item) => ({
+        item_id: String(item.id),
+        item_name: item.name,
+        item_category: item.category,
+        item_variant: item.variant,
+        price: item.price,
+        quantity: item.quantity,
+      })),
+    });
     const syncCatalog = () =>
       setStocks(getAdminStocks(getManagedProducts()));
     syncCatalog();
@@ -49,18 +67,23 @@ export default function CartPage() {
         setDiscount(0);
         return;
       }
-      const currentVoucher = getVoucherByCode(appliedCode);
-      if (!currentVoucher || subtotal < currentVoucher.minSubtotal) {
-        setDiscount(0);
-        return;
-      }
-      setDiscount(Math.min(currentVoucher.discount, subtotal));
+      const profile = getProfile();
+      const validation = validateVoucher(appliedCode, {
+        subtotal,
+        customerKey:
+          profile?.email?.toLowerCase() ||
+          profile?.phone ||
+          "guest",
+        sellerSubtotals: getSellerSubtotals(cart),
+      });
+      setDiscount(validation.valid ? validation.discount : 0);
+      if (!validation.valid) setVoucherMessage(validation.message);
     };
     syncVoucher();
     window.addEventListener(VOUCHERS_UPDATED_EVENT, syncVoucher);
     return () =>
       window.removeEventListener(VOUCHERS_UPDATED_EVENT, syncVoucher);
-  }, [appliedCode, subtotal]);
+  }, [appliedCode, cart, subtotal]);
 
   const update = (key: string, quantity: number) => {
     const next = cart
@@ -74,30 +97,31 @@ export default function CartPage() {
 
   const applyVoucher = () => {
     const code = voucher.trim().toUpperCase();
-    const selected = getVoucherByCode(code);
-    if (!selected) {
+    const profile = getProfile();
+    const validation = validateVoucher(code, {
+      subtotal,
+      customerKey:
+        profile?.email?.toLowerCase() || profile?.phone || "guest",
+      sellerSubtotals: getSellerSubtotals(cart),
+    });
+    if (!validation.valid || !validation.voucher) {
       setAppliedCode("");
       setDiscount(0);
       window.sessionStorage.removeItem("nova-voucher");
-      setVoucherMessage("Mã không tồn tại hoặc đang tạm dừng.");
-      return;
-    }
-    if (subtotal < selected.minSubtotal) {
-      setAppliedCode("");
-      setDiscount(0);
-      window.sessionStorage.removeItem("nova-voucher");
-      setVoucherMessage(
-        `Đơn hàng cần đạt ${formatPrice(selected.minSubtotal)} để dùng mã này.`,
-      );
+      setVoucherMessage(validation.message);
       return;
     }
     setVoucher(code);
     setAppliedCode(code);
-    setDiscount(Math.min(selected.discount, subtotal));
+    setDiscount(validation.discount);
     window.sessionStorage.setItem("nova-voucher", code);
-    setVoucherMessage(
-      `✓ ${selected.label} · đã giảm ${formatPrice(selected.discount)}`,
-    );
+    setVoucherMessage(`✓ ${validation.voucher.label} · ${validation.message}`);
+    trackCommerceEvent("select_promotion", {
+      promotion_id: validation.voucher.code,
+      promotion_name: validation.voucher.label,
+      value: validation.discount,
+      currency: "VND",
+    });
   };
 
   return (

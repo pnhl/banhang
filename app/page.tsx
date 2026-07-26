@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getWishlistIds, toggleWishlist } from "./lib/account";
+import { trackCommerceEvent } from "./lib/analytics";
 import {
   defaultVouchers,
   getAdminStocks,
@@ -20,6 +21,7 @@ import {
   RECENTLY_VIEWED_UPDATED_EVENT,
   toggleCompare,
 } from "./lib/engagement";
+import { getSellerForProduct } from "./lib/marketplace";
 
 type Product = {
   id: number;
@@ -339,6 +341,22 @@ export default function Home() {
       }
       return [...current, { ...product, quantity: 1 }];
     });
+    const seller = getSellerForProduct(product.id);
+    trackCommerceEvent("add_to_cart", {
+      currency: "VND",
+      value: product.price,
+      seller_id: seller.id,
+      items: [
+        {
+          item_id: String(product.id),
+          item_name: product.name,
+          item_category: product.category,
+          item_brand: seller.name,
+          price: product.price,
+          quantity: 1,
+        },
+      ],
+    });
     setToast(`Đã thêm “${product.name}” vào giỏ`);
     window.setTimeout(() => setToast(""), 2400);
   };
@@ -396,7 +414,10 @@ export default function Home() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
-            <button onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth" })}>
+            <button onClick={() => {
+              trackCommerceEvent("search", { search_term: query });
+              document.getElementById("products")?.scrollIntoView({ behavior: "smooth" });
+            }}>
               Tìm kiếm
             </button>
           </div>
@@ -454,11 +475,34 @@ export default function Home() {
 
       <section className="categories wrap" aria-label="Danh mục sản phẩm">
         {[...categoryList.slice(0, 5), "Voucher"].map((item) => (
-          <button key={item} onClick={() => chooseCategory(item === "Voucher" ? "Tất cả" : item)}>
+          <a
+            key={item}
+            href={
+              item === "Voucher"
+                ? "/#products"
+                : `/category/${
+                    item === "Điện tử"
+                      ? "dien-tu"
+                      : item === "Thời trang"
+                        ? "thoi-trang"
+                        : item === "Phụ kiện"
+                          ? "phu-kien"
+                          : item === "Nhà cửa"
+                            ? "nha-cua"
+                            : "lam-dep"
+                  }`
+            }
+            onClick={(event) => {
+              if (item === "Voucher") {
+                event.preventDefault();
+                chooseCategory("Tất cả");
+              }
+            }}
+          >
             <span>{categoryIcons[item] ?? "◇"}</span>
             <b>{item}</b>
             <small>{item === "Voucher" ? "Ưu đãi hôm nay" : `${catalogProducts.filter((p) => p.category === item).length} sản phẩm`}</small>
-          </button>
+          </a>
         ))}
       </section>
 

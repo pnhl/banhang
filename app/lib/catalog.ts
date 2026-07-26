@@ -21,14 +21,42 @@ export type Voucher = {
   code: string;
   label: string;
   discount: number;
+  discountType?: "fixed" | "percent";
+  percentage?: number;
+  maxDiscount?: number;
   minSubtotal: number;
   active: boolean;
+  startsAt?: string;
+  expiresAt?: string;
+  usageLimit?: number;
+  perCustomerLimit?: number;
+  budget?: number;
+  sellerId?: string;
+};
+
+export type VoucherRedemption = {
+  id: string;
+  code: string;
+  orderId: string;
+  customerKey: string;
+  amount: number;
+  sellerId?: string;
+  createdAt: string;
+};
+
+export type VoucherValidation = {
+  valid: boolean;
+  code: string;
+  discount: number;
+  message: string;
+  voucher?: Voucher;
 };
 
 export const MANAGED_PRODUCTS_KEY = "nova-admin-products";
 export const ADMIN_STOCKS_KEY = "nova-admin-stocks";
 export const ADMIN_VISIBILITY_KEY = "nova-admin-visibility";
 export const VOUCHERS_KEY = "nova-vouchers";
+export const VOUCHER_REDEMPTIONS_KEY = "nova-voucher-redemptions";
 export const PRODUCTS_UPDATED_EVENT = "nova-products-updated";
 export const VOUCHERS_UPDATED_EVENT = "nova-vouchers-updated";
 
@@ -50,15 +78,43 @@ export const defaultVouchers: Voucher[] = [
     code: "NOVA50",
     label: "Giảm 50.000đ cho đơn từ 499.000đ",
     discount: 50000,
+    discountType: "fixed",
     minSubtotal: 499000,
     active: true,
+    startsAt: "2026-01-01T00:00:00.000Z",
+    expiresAt: "2026-12-31T16:59:59.999Z",
+    usageLimit: 5000,
+    perCustomerLimit: 2,
+    budget: 250000000,
   },
   {
     code: "HELLO100",
     label: "Giảm 100.000đ cho đơn đầu tiên từ 1.500.000đ",
     discount: 100000,
+    discountType: "fixed",
     minSubtotal: 1500000,
-    active: false,
+    active: true,
+    startsAt: "2026-01-01T00:00:00.000Z",
+    expiresAt: "2026-12-31T16:59:59.999Z",
+    usageLimit: 1000,
+    perCustomerLimit: 1,
+    budget: 100000000,
+  },
+  {
+    code: "CLOUD15",
+    label: "Giảm 15% tối đa 120.000đ tại Cloud Lifestyle",
+    discount: 0,
+    discountType: "percent",
+    percentage: 15,
+    maxDiscount: 120000,
+    minSubtotal: 500000,
+    active: true,
+    startsAt: "2026-07-01T00:00:00.000Z",
+    expiresAt: "2026-09-30T16:59:59.999Z",
+    usageLimit: 800,
+    perCustomerLimit: 1,
+    budget: 60000000,
+    sellerId: "cloud-lifestyle",
   },
 ];
 
@@ -130,7 +186,14 @@ export const saveAdminVisibility = (next: Record<number, boolean>) => {
 };
 
 export const getVouchers = (): Voucher[] =>
-  parseStoredArray<Voucher>(VOUCHERS_KEY, defaultVouchers);
+  parseStoredArray<Voucher>(VOUCHERS_KEY, defaultVouchers).map((voucher) => ({
+    discountType: "fixed",
+    usageLimit: 0,
+    perCustomerLimit: 0,
+    budget: 0,
+    ...voucher,
+    code: voucher.code.trim().toUpperCase(),
+  }));
 
 export const saveVouchers = (next: Voucher[]) => {
   window.localStorage.setItem(VOUCHERS_KEY, JSON.stringify(next));
@@ -142,6 +205,173 @@ export const getVoucherByCode = (code: string) =>
     (voucher) =>
       voucher.active && voucher.code === code.trim().toUpperCase(),
   );
+
+export const getVoucherRedemptions = () =>
+  parseStoredArray<VoucherRedemption>(VOUCHER_REDEMPTIONS_KEY, []);
+
+export function getVoucherStats(code: string) {
+  const redemptions = getVoucherRedemptions().filter(
+    (item) => item.code === code.trim().toUpperCase(),
+  );
+  return {
+    usedCount: redemptions.length,
+    spent: redemptions.reduce((sum, item) => sum + item.amount, 0),
+  };
+}
+
+export function validateVoucher(
+  code: string,
+  {
+    subtotal,
+    customerKey = "guest",
+    sellerSubtotals = {},
+    now = new Date(),
+  }: {
+    subtotal: number;
+    customerKey?: string;
+    sellerSubtotals?: Record<string, number>;
+    now?: Date;
+  },
+): VoucherValidation {
+  const normalizedCode = code.trim().toUpperCase();
+  const voucher = getVouchers().find(
+    (item) => item.code === normalizedCode,
+  );
+  if (!voucher || !voucher.active) {
+    return {
+      valid: false,
+      code: normalizedCode,
+      discount: 0,
+      message: "Mã không tồn tại hoặc đang tạm dừng.",
+    };
+  }
+
+  const startsAt = voucher.startsAt ? new Date(voucher.startsAt) : null;
+  const expiresAt = voucher.expiresAt ? new Date(voucher.expiresAt) : null;
+  if (startsAt && startsAt.getTime() > now.getTime()) {
+    return {
+      valid: false,
+      code: normalizedCode,
+      discount: 0,
+      voucher,
+      message: "Mã ưu đãi chưa đến thời gian áp dụng.",
+    };
+  }
+  if (expiresAt && expiresAt.getTime() < now.getTime()) {
+    return {
+      valid: false,
+      code: normalizedCode,
+      discount: 0,
+      voucher,
+      message: "Mã ưu đãi đã hết hạn.",
+    };
+  }
+
+  const eligibleSubtotal = voucher.sellerId
+    ? sellerSubtotals[voucher.sellerId] ?? 0
+    : subtotal;
+  if (voucher.sellerId && eligibleSubtotal <= 0) {
+    return {
+      valid: false,
+      code: normalizedCode,
+      discount: 0,
+      voucher,
+      message: "Giỏ hàng chưa có sản phẩm thuộc gian hàng áp dụng mã.",
+    };
+  }
+  if (eligibleSubtotal < voucher.minSubtotal) {
+    return {
+      valid: false,
+      code: normalizedCode,
+      discount: 0,
+      voucher,
+      message: `Phần hàng đủ điều kiện cần đạt ${formatPrice(voucher.minSubtotal)}.`,
+    };
+  }
+
+  const redemptions = getVoucherRedemptions().filter(
+    (item) => item.code === normalizedCode,
+  );
+  if (voucher.usageLimit && redemptions.length >= voucher.usageLimit) {
+    return {
+      valid: false,
+      code: normalizedCode,
+      discount: 0,
+      voucher,
+      message: "Mã ưu đãi đã hết lượt sử dụng.",
+    };
+  }
+  const customerUses = redemptions.filter(
+    (item) => item.customerKey === customerKey,
+  ).length;
+  if (
+    voucher.perCustomerLimit &&
+    customerUses >= voucher.perCustomerLimit
+  ) {
+    return {
+      valid: false,
+      code: normalizedCode,
+      discount: 0,
+      voucher,
+      message: "Bạn đã sử dụng hết số lượt cho mã này.",
+    };
+  }
+
+  let discount =
+    voucher.discountType === "percent"
+      ? Math.round(
+          eligibleSubtotal * Math.max(0, voucher.percentage ?? 0) * 0.01,
+        )
+      : Math.max(0, voucher.discount);
+  if (voucher.maxDiscount) discount = Math.min(discount, voucher.maxDiscount);
+  discount = Math.min(discount, eligibleSubtotal);
+
+  const spent = redemptions.reduce((sum, item) => sum + item.amount, 0);
+  if (voucher.budget) {
+    const remainingBudget = Math.max(0, voucher.budget - spent);
+    if (remainingBudget <= 0) {
+      return {
+        valid: false,
+        code: normalizedCode,
+        discount: 0,
+        voucher,
+        message: "Ngân sách của mã ưu đãi đã được sử dụng hết.",
+      };
+    }
+    discount = Math.min(discount, remainingBudget);
+  }
+
+  return {
+    valid: discount > 0,
+    code: normalizedCode,
+    discount,
+    voucher,
+    message:
+      discount > 0
+        ? `Áp dụng thành công, giảm ${formatPrice(discount)}.`
+        : "Mã ưu đãi chưa tạo ra mức giảm hợp lệ.",
+  };
+}
+
+export function recordVoucherRedemption(
+  redemption: Omit<VoucherRedemption, "id" | "createdAt">,
+) {
+  const next: VoucherRedemption = {
+    ...redemption,
+    code: redemption.code.trim().toUpperCase(),
+    id:
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `voucher-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+  };
+  window.localStorage.setItem(
+    VOUCHER_REDEMPTIONS_KEY,
+    JSON.stringify([...getVoucherRedemptions(), next]),
+  );
+  window.dispatchEvent(new Event(VOUCHERS_UPDATED_EVENT));
+  return next;
+}
 
 export const getCart = (): CartLine[] => {
   if (typeof window === "undefined") return [];

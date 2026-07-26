@@ -6,9 +6,12 @@ import { SiteHeader } from "../components/SiteHeader";
 import {
   AccountProfile,
   createOrder,
+  getOrders,
   getProfile,
+  saveOrders,
   saveProfile,
 } from "../lib/account";
+import { trackCommerceEvent } from "../lib/analytics";
 import {
   CartLine,
   cartLineKey,
@@ -16,18 +19,28 @@ import {
   getAdminStocks,
   getCart,
   getManagedProducts,
-  getVoucherByCode,
   PRODUCTS_UPDATED_EVENT,
+  recordVoucherRedemption,
   saveAdminStocks,
   saveCart,
+  validateVoucher,
   VOUCHERS_UPDATED_EVENT,
 } from "../lib/catalog";
+import {
+  calculateIncludedTax,
+  getBusinessProfile,
+} from "../lib/invoicing";
 import {
   loadProvinces,
   loadWards,
   VietnamProvince,
   VietnamWard,
 } from "../lib/locations";
+import {
+  allocateOrderBySeller,
+  getSellerForProduct,
+  getSellerSubtotals,
+} from "../lib/marketplace";
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -50,7 +63,24 @@ export default function CheckoutPage() {
   const [locationNotice, setLocationNotice] = useState("");
 
   useEffect(() => {
-    setCart(getCart());
+    const currentCart = getCart();
+    setCart(currentCart);
+    trackCommerceEvent("begin_checkout", {
+      currency: "VND",
+      value: currentCart.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0,
+      ),
+      items: currentCart.map((item) => ({
+        item_id: String(item.id),
+        item_name: item.name,
+        item_category: item.category,
+        item_brand: getSellerForProduct(item.id).name,
+        item_variant: item.variant,
+        price: item.price,
+        quantity: item.quantity,
+      })),
+    });
     const storedProfile = getProfile();
     setProfile(storedProfile);
     setProvinceCode(
@@ -132,20 +162,28 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     const syncVoucher = () => {
-      const selected = getVoucherByCode(voucherCode);
-      setDiscount(
-        selected && subtotal >= selected.minSubtotal
-          ? Math.min(selected.discount, subtotal)
-          : 0,
-      );
+      if (!voucherCode) {
+        setDiscount(0);
+        return;
+      }
+      const validation = validateVoucher(voucherCode, {
+        subtotal,
+        customerKey:
+          profile?.email?.toLowerCase() ||
+          profile?.phone ||
+          "guest",
+        sellerSubtotals: getSellerSubtotals(cart),
+      });
+      setDiscount(validation.valid ? validation.discount : 0);
+      if (!validation.valid) setCheckoutError(validation.message);
     };
     syncVoucher();
     window.addEventListener(VOUCHERS_UPDATED_EVENT, syncVoucher);
     return () =>
       window.removeEventListener(VOUCHERS_UPDATED_EVENT, syncVoucher);
-  }, [subtotal, voucherCode]);
+  }, [cart, profile, subtotal, voucherCode]);
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (hasStockIssue) {
       setCheckoutError(
@@ -183,6 +221,36 @@ export default function CheckoutPage() {
       addressDetail,
       address: [addressDetail, wardName, selectedProvince.name].join(", "),
     };
+    const voucherValidation = voucherCode
+      ? validateVoucher(voucherCode, {
+          subtotal,
+          customerKey:
+            customer.email.toLowerCase() || customer.phone || "guest",
+          sellerSubtotals: getSellerSubtotals(cart),
+        })
+      : null;
+    if (voucherCode && !voucherValidation?.valid) {
+      setCheckoutError(
+        voucherValidation?.message ??
+          "Mã ưu đãi không còn đủ điều kiện áp dụng.",
+      );
+      return;
+    }
+    const finalDiscount = voucherValidation?.discount ?? 0;
+    const finalTotal = Math.max(
+      0,
+      subtotal - finalDiscount + shippingFee,
+    );
+    const business = getBusinessProfile();
+    const taxBreakdown = calculateIncludedTax(
+      finalTotal,
+      business.vatRate,
+    );
+    const allocations = allocateOrderBySeller(
+      cart,
+      finalDiscount,
+      taxBreakdown.tax,
+    );
     saveProfile(customer);
     const order = createOrder({
       customer,
@@ -192,8 +260,65 @@ export default function CheckoutPage() {
       shippingFee,
       shippingNote: String(form.get("note") ?? ""),
       subtotal,
-      discount: appliedDiscount,
-      total,
+      discount: finalDiscount,
+      total: finalTotal,
+      voucherCode: voucherValidation?.code,
+      amountBeforeTax: taxBreakdown.beforeTax,
+      taxAmount: taxBreakdown.tax,
+      invoiceStatus: "issued-demo",
+      business,
+      sellerAllocations: allocations,
+      serverPersisted: false,
+    });
+    if (voucherValidation?.code && finalDiscount > 0) {
+      recordVoucherRedemption({
+        code: voucherValidation.code,
+        orderId: order.id,
+        customerKey:
+          customer.email.toLowerCase() || customer.phone || "guest",
+        sellerId: voucherValidation.voucher?.sellerId,
+        amount: finalDiscount,
+      });
+    }
+    try {
+      const response = await fetch("/api/marketplace/orders", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ order }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        persisted?: boolean;
+      };
+      if (response.ok && result.persisted) {
+        order.serverPersisted = true;
+        saveOrders(
+          getOrders().map((item) =>
+            item.id === order.id
+              ? { ...item, serverPersisted: true }
+              : item,
+          ),
+        );
+      }
+    } catch {
+      // The device-local order remains available when server persistence fails.
+    }
+    trackCommerceEvent("purchase", {
+      transaction_id: order.id,
+      value: finalTotal,
+      tax: taxBreakdown.tax,
+      shipping: shippingFee,
+      currency: "VND",
+      coupon: voucherValidation?.code ?? "",
+      user_key: customer.email.toLowerCase(),
+      items: cart.map((item) => ({
+        item_id: String(item.id),
+        item_name: item.name,
+        item_category: item.category,
+        item_brand: getSellerForProduct(item.id).name,
+        item_variant: item.variant,
+        price: item.price,
+        quantity: item.quantity,
+      })),
     });
     const nextStocks = { ...stocks };
     cart.forEach((item) => {
@@ -360,7 +485,14 @@ export default function CheckoutPage() {
                           name="shipping"
                           value={name}
                           checked={shipping === name}
-                          onChange={() => setShipping(name)}
+                          onChange={() => {
+                            setShipping(name);
+                            trackCommerceEvent("add_shipping_info", {
+                              shipping_tier: name,
+                              value: total,
+                              currency: "VND",
+                            });
+                          }}
                         />
                         <span>{icon}</span>
                         <b>{name}<small>{eta} · {fee}</small></b>
@@ -386,7 +518,14 @@ export default function CheckoutPage() {
                           name="payment"
                           value={name}
                           checked={payment === name}
-                          onChange={() => setPayment(name)}
+                          onChange={() => {
+                            setPayment(name);
+                            trackCommerceEvent("add_payment_info", {
+                              payment_type: name,
+                              value: total,
+                              currency: "VND",
+                            });
+                          }}
                         />
                         <span>{icon}</span>
                         <b>{name}<small>{note}</small></b>

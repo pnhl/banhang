@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { trackCommerceEvent } from "../lib/analytics";
 import { getProfile, getWishlistIds } from "../lib/account";
 import { getCart } from "../lib/catalog";
 import {
@@ -39,6 +40,9 @@ export function SiteHeader() {
   const search = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const value = new FormData(event.currentTarget).get("q");
+    trackCommerceEvent("search", {
+      search_term: String(value ?? ""),
+    });
     window.location.href = `/?q=${encodeURIComponent(String(value ?? ""))}#products`;
   };
 
@@ -62,8 +66,8 @@ export function SiteHeader() {
           </nav>
         </div>
         <div className="site-subnav wrap">
-          <nav><a href="/">Trang chủ</a><a href="/#products">Sản phẩm</a><a href="/compare">So sánh{compareCount > 0 ? ` (${compareCount})` : ""}</a><a href="/policies/shipping">Giao hàng</a><a href="/policies/returns">Đổi trả</a><a href="/support">Trợ giúp</a></nav>
-          <a href="/admin">Kênh quản trị →</a>
+          <nav><a href="/">Trang chủ</a><a href="/#products">Sản phẩm</a><a href="/stores">Gian hàng</a><a href="/compare">So sánh{compareCount > 0 ? ` (${compareCount})` : ""}</a><a href="/policies/shipping">Giao hàng</a><a href="/policies/returns">Đổi trả</a><a href="/support">Trợ giúp</a></nav>
+          <a href="/seller">Kênh người bán →</a>
         </div>
       </header>
       <nav className="mobile-nav page-mobile-nav">

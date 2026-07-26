@@ -13,6 +13,7 @@ import {
   getAdminStocks,
   getAdminVisibility,
   getManagedProducts,
+  getVoucherStats,
   getVouchers,
   Product,
   products,
@@ -30,6 +31,7 @@ import {
   ReviewStatus,
   updateReviewStatus,
 } from "../lib/engagement";
+import { sellers } from "../lib/marketplace";
 
 type AdminOrder = {
   id: string;
@@ -44,6 +46,21 @@ type AdminOrder = {
 
 type ProductDraft = Product & {
   stock: number;
+};
+
+type CommerceSummary = {
+  configured: boolean;
+  metrics: {
+    order_count?: number;
+    revenue?: number;
+    tax?: number;
+    discount?: number;
+  } | null;
+  funnel: Array<{
+    event_name: string;
+    count: number;
+    value: number;
+  }>;
 };
 
 const createProductDraft = (): ProductDraft => ({
@@ -149,11 +166,22 @@ export function AdminDashboard() {
   const [productDraft, setProductDraft] = useState<ProductDraft | null>(null);
   const [vouchers, setVoucherState] = useState<Voucher[]>(defaultVouchers);
   const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [commerceSummary, setCommerceSummary] =
+    useState<CommerceSummary | null>(null);
   const [voucherDraft, setVoucherDraft] = useState({
     code: "",
     label: "",
+    discountType: "fixed" as "fixed" | "percent",
     discount: 50000,
+    percentage: 10,
+    maxDiscount: 100000,
     minSubtotal: 499000,
+    startsAt: "2026-07-26",
+    expiresAt: "2026-12-31",
+    usageLimit: 1000,
+    perCustomerLimit: 1,
+    budget: 50000000,
+    sellerId: "",
   });
 
   useEffect(() => {
@@ -169,6 +197,12 @@ export function AdminDashboard() {
     setVoucherState(getVouchers());
     const syncReviews = () => setReviews(getReviews());
     syncReviews();
+    void fetch("/api/admin/commerce", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((result: CommerceSummary | null) => {
+        if (result) setCommerceSummary(result);
+      })
+      .catch(() => undefined);
     window.addEventListener("nova-orders-updated", sync);
     window.addEventListener(REVIEWS_UPDATED_EVENT, syncReviews);
     return () => {
@@ -234,6 +268,18 @@ export function AdminDashboard() {
   const pendingReviews = reviews.filter(
     (review) => review.status === "pending",
   ).length;
+  const funnelCount = (name: string) =>
+    Number(
+      commerceSummary?.funnel.find(
+        (item) => item.event_name === name,
+      )?.count ?? 0,
+    );
+  const productionOrders = Number(
+    commerceSummary?.metrics?.order_count ?? 0,
+  );
+  const productionRevenue = Number(
+    commerceSummary?.metrics?.revenue ?? 0,
+  );
 
   const flash = (text: string) => {
     setNotice(text);
@@ -381,10 +427,37 @@ export function AdminDashboard() {
       code,
       label:
         voucherDraft.label.trim() ||
-        `Giảm ${formatPrice(voucherDraft.discount)} cho đơn đủ điều kiện`,
-      discount: Math.max(0, Number(voucherDraft.discount)),
+        (voucherDraft.discountType === "percent"
+          ? `Giảm ${voucherDraft.percentage}% tối đa ${formatPrice(voucherDraft.maxDiscount)}`
+          : `Giảm ${formatPrice(voucherDraft.discount)} cho đơn đủ điều kiện`),
+      discount:
+        voucherDraft.discountType === "fixed"
+          ? Math.max(0, Number(voucherDraft.discount))
+          : 0,
+      discountType: voucherDraft.discountType,
+      percentage:
+        voucherDraft.discountType === "percent"
+          ? Math.max(0, Math.min(100, Number(voucherDraft.percentage)))
+          : undefined,
+      maxDiscount:
+        voucherDraft.discountType === "percent"
+          ? Math.max(0, Number(voucherDraft.maxDiscount))
+          : undefined,
       minSubtotal: Math.max(0, Number(voucherDraft.minSubtotal)),
       active: true,
+      startsAt: voucherDraft.startsAt
+        ? new Date(`${voucherDraft.startsAt}T00:00:00`).toISOString()
+        : undefined,
+      expiresAt: voucherDraft.expiresAt
+        ? new Date(`${voucherDraft.expiresAt}T23:59:59`).toISOString()
+        : undefined,
+      usageLimit: Math.max(0, Number(voucherDraft.usageLimit)),
+      perCustomerLimit: Math.max(
+        0,
+        Number(voucherDraft.perCustomerLimit),
+      ),
+      budget: Math.max(0, Number(voucherDraft.budget)),
+      sellerId: voucherDraft.sellerId || undefined,
     };
     const exists = vouchers.some((item) => item.code === code);
     const next = exists
@@ -395,8 +468,17 @@ export function AdminDashboard() {
     setVoucherDraft({
       code: "",
       label: "",
+      discountType: "fixed",
       discount: 50000,
+      percentage: 10,
+      maxDiscount: 100000,
       minSubtotal: 499000,
+      startsAt: "2026-07-26",
+      expiresAt: "2026-12-31",
+      usageLimit: 1000,
+      perCustomerLimit: 1,
+      budget: 50000000,
+      sellerId: "",
     });
     flash(exists ? `Đã cập nhật mã ${code}.` : `Đã tạo mã ${code}.`);
   };
@@ -471,7 +553,7 @@ export function AdminDashboard() {
 
   return (
     <main className="admin-shell">
-      <aside className="admin-sidebar">
+        <aside className="admin-sidebar">
         <a className="brand" href="/">
           <span className="brand-mark">N</span>
           <span>
@@ -488,6 +570,10 @@ export function AdminDashboard() {
         </div>
         <nav>
           <small>TỔNG QUAN</small>
+          <a className="admin-seller-link" href="/seller">
+            <span>↗</span>
+            Seller Center
+          </a>
           <button
             className={section === "overview" ? "active" : ""}
             onClick={() => setSection("overview")}
@@ -786,17 +872,69 @@ export function AdminDashboard() {
                 </label>
                 <div className="two-col">
                   <label>
-                    Số tiền giảm
-                    <input
-                      required
-                      min="0"
-                      step="1000"
-                      type="number"
-                      value={voucherDraft.discount}
+                    Loại ưu đãi
+                    <select
+                      value={voucherDraft.discountType}
                       onChange={(event) =>
                         setVoucherDraft((current) => ({
                           ...current,
-                          discount: Number(event.target.value),
+                          discountType: event.target.value as
+                            | "fixed"
+                            | "percent",
+                        }))
+                      }
+                    >
+                      <option value="fixed">Giảm số tiền cố định</option>
+                      <option value="percent">Giảm theo phần trăm</option>
+                    </select>
+                  </label>
+                  <label>
+                    {voucherDraft.discountType === "fixed"
+                      ? "Số tiền giảm"
+                      : "Phần trăm giảm"}
+                    <input
+                      required
+                      min="0"
+                      max={
+                        voucherDraft.discountType === "percent"
+                          ? "100"
+                          : undefined
+                      }
+                      step={
+                        voucherDraft.discountType === "percent"
+                          ? "1"
+                          : "1000"
+                      }
+                      type="number"
+                      value={
+                        voucherDraft.discountType === "fixed"
+                          ? voucherDraft.discount
+                          : voucherDraft.percentage
+                      }
+                      onChange={(event) =>
+                        setVoucherDraft((current) => ({
+                          ...current,
+                          ...(current.discountType === "fixed"
+                            ? { discount: Number(event.target.value) }
+                            : { percentage: Number(event.target.value) }),
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+                <div className="two-col">
+                  <label>
+                    Giảm tối đa
+                    <input
+                      min="0"
+                      step="1000"
+                      type="number"
+                      disabled={voucherDraft.discountType === "fixed"}
+                      value={voucherDraft.maxDiscount}
+                      onChange={(event) =>
+                        setVoucherDraft((current) => ({
+                          ...current,
+                          maxDiscount: Number(event.target.value),
                         }))
                       }
                     />
@@ -818,9 +956,104 @@ export function AdminDashboard() {
                     />
                   </label>
                 </div>
+                <div className="two-col">
+                  <label>
+                    Bắt đầu
+                    <input
+                      required
+                      type="date"
+                      value={voucherDraft.startsAt}
+                      onChange={(event) =>
+                        setVoucherDraft((current) => ({
+                          ...current,
+                          startsAt: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Hết hạn
+                    <input
+                      required
+                      type="date"
+                      value={voucherDraft.expiresAt}
+                      onChange={(event) =>
+                        setVoucherDraft((current) => ({
+                          ...current,
+                          expiresAt: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+                <div className="three-col">
+                  <label>
+                    Tổng lượt dùng
+                    <input
+                      min="0"
+                      type="number"
+                      value={voucherDraft.usageLimit}
+                      onChange={(event) =>
+                        setVoucherDraft((current) => ({
+                          ...current,
+                          usageLimit: Number(event.target.value),
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Lượt mỗi khách
+                    <input
+                      min="0"
+                      type="number"
+                      value={voucherDraft.perCustomerLimit}
+                      onChange={(event) =>
+                        setVoucherDraft((current) => ({
+                          ...current,
+                          perCustomerLimit: Number(event.target.value),
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Ngân sách
+                    <input
+                      min="0"
+                      step="10000"
+                      type="number"
+                      value={voucherDraft.budget}
+                      onChange={(event) =>
+                        setVoucherDraft((current) => ({
+                          ...current,
+                          budget: Number(event.target.value),
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+                <label>
+                  Phạm vi gian hàng
+                  <select
+                    value={voucherDraft.sellerId}
+                    onChange={(event) =>
+                      setVoucherDraft((current) => ({
+                        ...current,
+                        sellerId: event.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">Toàn sàn NOVA</option>
+                    {sellers.map((seller) => (
+                      <option value={seller.id} key={seller.id}>
+                        {seller.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button className="primary-submit">Tạo hoặc cập nhật mã</button>
                 <small>
-                  Dữ liệu ưu đãi được lưu trên trình duyệt của bản demo này.
+                  Lượt dùng được ghi nhận khi đơn hàng hoàn tất và đồng bộ vào
+                  báo cáo production khi D1 khả dụng.
                 </small>
               </form>
               <section className="voucher-list">
@@ -828,7 +1061,12 @@ export function AdminDashboard() {
                   <p className="eyebrow">ĐANG QUẢN LÝ</p>
                   <h2>{vouchers.length} mã ưu đãi</h2>
                 </div>
-                {vouchers.map((voucher) => (
+                {vouchers.map((voucher) => {
+                  const stats = getVoucherStats(voucher.code);
+                  const seller = sellers.find(
+                    (item) => item.id === voucher.sellerId,
+                  );
+                  return (
                   <article key={voucher.code}>
                     <div className="voucher-ticket">
                       <span>%</span>
@@ -839,10 +1077,44 @@ export function AdminDashboard() {
                     </div>
                     <div className="voucher-values">
                       <span>
-                        Giảm <b>{formatPrice(voucher.discount)}</b>
+                        Giảm{" "}
+                        <b>
+                          {voucher.discountType === "percent"
+                            ? `${voucher.percentage ?? 0}%`
+                            : formatPrice(voucher.discount)}
+                        </b>
                       </span>
                       <span>
                         Đơn từ <b>{formatPrice(voucher.minSubtotal)}</b>
+                      </span>
+                      <span>
+                        Đã dùng{" "}
+                        <b>
+                          {stats.usedCount}/{voucher.usageLimit || "∞"}
+                        </b>
+                      </span>
+                      <span>
+                        Ngân sách còn{" "}
+                        <b>
+                          {voucher.budget
+                            ? formatPrice(
+                                Math.max(0, voucher.budget - stats.spent),
+                              )
+                            : "Không giới hạn"}
+                        </b>
+                      </span>
+                      <span>
+                        Phạm vi <b>{seller?.name ?? "Toàn sàn"}</b>
+                      </span>
+                      <span>
+                        Hết hạn{" "}
+                        <b>
+                          {voucher.expiresAt
+                            ? new Intl.DateTimeFormat("vi-VN").format(
+                                new Date(voucher.expiresAt),
+                              )
+                            : "Không giới hạn"}
+                        </b>
                       </span>
                     </div>
                     <div className="voucher-actions">
@@ -857,7 +1129,7 @@ export function AdminDashboard() {
                       </button>
                     </div>
                   </article>
-                ))}
+                )})}
                 {vouchers.length === 0 && (
                   <p className="admin-empty">
                     Chưa có mã ưu đãi. Tạo mã đầu tiên ở biểu mẫu bên cạnh.
@@ -1008,13 +1280,42 @@ export function AdminDashboard() {
         {section === "analytics" && (
           <div className="admin-content">
             <div className="admin-heading">
-              <div><p className="eyebrow">HIỆU QUẢ</p><h1>Phân tích kinh doanh</h1><p>Tổng hợp trực tiếp từ danh sách đơn đang hiển thị.</p></div>
+              <div><p className="eyebrow">HIỆU QUẢ & CHUYỂN ĐỔI</p><h1>Phân tích kinh doanh</h1><p>{commerceSummary?.configured ? "Doanh thu và hành vi mua hàng được tổng hợp từ dữ liệu D1 production." : "Đang hiển thị dữ liệu dự phòng trên thiết bị; thêm Google Analytics ID để nhận báo cáo GA4."}</p></div>
             </div>
             <div className="analytics-grid">
-              <article><span>Giá trị đơn trung bình</span><strong>{formatPrice(orders.length ? revenue / orders.length : 0)}</strong></article>
+              <article><span>Doanh thu đơn thật</span><strong>{formatPrice(commerceSummary?.configured ? productionRevenue : getOrders().reduce((sum, order) => sum + order.total, 0))}</strong></article>
+              <article><span>Đơn production</span><strong>{commerceSummary?.configured ? productionOrders : getOrders().length}</strong></article>
+              <article><span>Giá trị đơn trung bình</span><strong>{formatPrice(commerceSummary?.configured ? (productionOrders ? productionRevenue / productionOrders : 0) : orders.length ? revenue / orders.length : 0)}</strong></article>
               <article><span>Tỷ lệ hoàn tất</span><strong>{Math.round((orders.filter((order) => order.status === "Hoàn tất").length / Math.max(1, orders.length)) * 100)}%</strong></article>
               <article><span>Sản phẩm đang bán</span><strong>{managedProducts.length}</strong></article>
             </div>
+            <section className="conversion-funnel">
+              <div>
+                <p className="eyebrow">GA4 ECOMMERCE</p>
+                <h2>Phễu chuyển đổi</h2>
+              </div>
+              {[
+                ["view_item", "Xem sản phẩm"],
+                ["add_to_cart", "Thêm vào giỏ"],
+                ["begin_checkout", "Bắt đầu thanh toán"],
+                ["purchase", "Đặt hàng"],
+              ].map(([eventName, label], index) => {
+                const count = funnelCount(eventName);
+                const max = Math.max(1, funnelCount("view_item"));
+                return (
+                  <article key={eventName}>
+                    <span>{index + 1}</span>
+                    <p><b>{label}</b><small>{eventName}</small></p>
+                    <i><em style={{ width: `${Math.max(4, (count / max) * 100)}%` }} /></i>
+                    <strong>{count}</strong>
+                  </article>
+                );
+              })}
+              <small>
+                Các sự kiện chuẩn được gửi đồng thời tới kho phân tích NOVA và
+                Google Analytics khi biến GOOGLE_ANALYTICS_ID được cấu hình.
+              </small>
+            </section>
           </div>
         )}
 

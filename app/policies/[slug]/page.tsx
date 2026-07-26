@@ -33,13 +33,14 @@ const policies = {
     eyebrow: "DỮ LIỆU & QUYỀN RIÊNG TƯ",
     title: "Chính sách bảo mật",
     intro: "NOVA tôn trọng quyền riêng tư và chỉ xử lý dữ liệu cần thiết để cung cấp, bảo vệ và cải thiện trải nghiệm mua sắm.",
-    updated: "Cập nhật ngày 24.07.2026",
+    updated: "Cập nhật ngày 26.07.2026",
     sections: [
       ["1. Dữ liệu được thu thập", "Thông tin tài khoản, liên hệ, địa chỉ giao hàng, lịch sử giao dịch và dữ liệu kỹ thuật cần thiết để vận hành dịch vụ."],
       ["2. Mục đích sử dụng", "Xử lý đơn hàng, hỗ trợ khách hàng, phòng chống gian lận, cá nhân hóa trải nghiệm và gửi thông báo khi bạn đã đồng ý."],
       ["3. Chia sẻ dữ liệu", "Dữ liệu chỉ được chia sẻ ở mức cần thiết với đơn vị thanh toán, vận chuyển và nhà cung cấp dịch vụ tuân thủ yêu cầu bảo mật."],
       ["4. Thời gian lưu trữ", "Dữ liệu được lưu trong thời gian cần thiết cho mục đích cung cấp dịch vụ và nghĩa vụ pháp lý, sau đó được xóa hoặc ẩn danh."],
       ["5. Quyền của bạn", "Bạn có thể yêu cầu truy cập, chỉnh sửa, hạn chế xử lý hoặc xóa dữ liệu theo quy định áp dụng bằng cách liên hệ bộ phận bảo mật."],
+      ["6. Đo lường và Google Analytics", "Google Analytics chỉ được kích hoạt khi mã đo lường được cấu hình và bạn chọn đồng ý phân tích. NOVA mặc định từ chối lưu trữ dữ liệu phân tích, không bật lưu trữ quảng cáo và cho phép bạn tiếp tục chỉ với dữ liệu thiết yếu."],
     ],
   },
   terms: {

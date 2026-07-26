@@ -16,6 +16,7 @@ import {
   getManagedProducts,
   saveAdminStocks,
 } from "../../lib/catalog";
+import { getSellerForProduct } from "../../lib/marketplace";
 
 const progress: OrderStatus[] = [
   "Chờ xác nhận",
@@ -161,7 +162,11 @@ export function OrderDetailClient({ orderId }: { orderId: string }) {
                 <div>
                   <p>{item.category}</p>
                   <a href={`/product/${item.id}`}>{item.name}</a>
-                  <small>{item.variant ?? "Tiêu chuẩn"} · Số lượng {item.quantity}</small>
+                  <small>
+                    {item.variant ?? "Tiêu chuẩn"} · Số lượng {item.quantity}
+                    {" · "}
+                    {getSellerForProduct(item.id).name}
+                  </small>
                 </div>
                 <strong>{formatPrice(item.price * item.quantity)}</strong>
               </article>
@@ -182,6 +187,8 @@ export function OrderDetailClient({ orderId }: { orderId: string }) {
                 <div><dt>Tạm tính</dt><dd>{formatPrice(order.subtotal)}</dd></div>
                 <div><dt>Giảm giá</dt><dd>− {formatPrice(order.discount)}</dd></div>
                 <div><dt>Vận chuyển</dt><dd>{shippingFee ? formatPrice(shippingFee) : "Miễn phí"}</dd></div>
+                <div><dt>Tiền trước thuế</dt><dd>{formatPrice(order.amountBeforeTax ?? order.total)}</dd></div>
+                <div><dt>Thuế GTGT</dt><dd>{formatPrice(order.taxAmount ?? 0)}</dd></div>
                 <div><dt>Tổng cộng</dt><dd>{formatPrice(order.total)}</dd></div>
               </dl>
             </section>
@@ -190,6 +197,9 @@ export function OrderDetailClient({ orderId }: { orderId: string }) {
               <button className="invoice-button" onClick={() => window.print()}>
                 In / lưu PDF hóa đơn
               </button>
+              <a className="invoice-link-button" href={`/invoices/${order.id}`}>
+                Xem hóa đơn điện tử
+              </a>
               {order.status === "Chờ xác nhận" && (
                 <button className="cancel-button" onClick={cancel}>Hủy đơn hàng</button>
               )}

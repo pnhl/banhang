@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./public/og.png" alt="NOVA Market — Món hay mỗi ngày" width="100%" />
+  <img src="./public/og-marketplace.png" alt="NOVA Market — Mỗi gian hàng, một chuyên môn" width="100%" />
 
   <h1>NOVA Market</h1>
 
@@ -56,8 +56,10 @@ flowchart LR
 | Cá nhân hóa | Ghi nhớ tối đa tám sản phẩm vừa xem trên thiết bị |
 | Giỏ hàng | Lưu giỏ trên thiết bị, tách biến thể, kiểm tra tồn kho và áp dụng voucher đang hoạt động |
 | Thanh toán | Chọn tỉnh/thành phố → phường/xã → địa chỉ chi tiết, ba tốc độ giao hàng và bốn phương thức thanh toán mô phỏng |
+| Marketplace | Danh bạ gian hàng, trang riêng cho từng nhà bán hàng, phân bổ doanh thu, phí nền tảng và đối soát |
+| Voucher nâng cao | Giảm cố định hoặc phần trăm, thời gian áp dụng, lượt dùng, giới hạn mỗi khách, ngân sách và phạm vi gian hàng |
 | Tài khoản | Đăng ký, đăng nhập demo, hồ sơ, lịch sử mua hàng và tổng chi tiêu |
-| Đơn hàng | Tiến trình xử lý, hóa đơn in/PDF, hủy và hoàn tồn kho, mua lại |
+| Đơn hàng | Tiến trình xử lý, hóa đơn điện tử demo có VAT và thông tin doanh nghiệp, hủy và hoàn tồn kho, mua lại |
 | Yêu thích | Lưu sản phẩm và thêm nhanh vào giỏ hàng |
 | Hỗ trợ | Tra cứu mã đơn, FAQ, chính sách và biểu mẫu liên hệ an toàn |
 
@@ -73,6 +75,16 @@ flowchart LR
 - Duyệt, từ chối hoặc xóa đánh giá khách hàng trước khi công khai.
 - Xuất danh sách đơn hàng đang lọc ra CSV.
 - Phân tích giá trị đơn trung bình và tỷ lệ hoàn tất.
+- Báo cáo doanh thu production từ D1 và phễu chuyển đổi thương mại điện tử.
+- Seller Center theo từng gian hàng với ví doanh thu, phí hoa hồng và lịch sử đối soát.
+- Quản lý thông tin doanh nghiệp, thuế suất và dữ liệu hiển thị trên hóa đơn.
+
+### SEO và đo lường
+
+- Sitemap, robots.txt, canonical URL, metadata Open Graph và dữ liệu có cấu trúc JSON-LD.
+- Trang danh mục tối ưu tìm kiếm, trang gian hàng và Product/Offer schema cho từng sản phẩm.
+- Google Analytics 4 được kích hoạt khi cấu hình `GOOGLE_ANALYTICS_ID`.
+- Theo dõi các sự kiện chuẩn `view_item`, `add_to_cart`, `begin_checkout`, `purchase` và phễu chuyển đổi nội bộ.
 
 ### Trải nghiệm và an toàn
 
@@ -88,9 +100,12 @@ flowchart LR
 | --- | --- |
 | `/` | Trang chủ, tìm kiếm, bộ lọc và danh sách sản phẩm |
 | `/product/:id` | Chi tiết sản phẩm và lựa chọn biến thể |
+| `/category/:slug` | Trang danh mục tối ưu SEO |
+| `/stores`, `/store/:slug` | Danh bạ và trang riêng của nhà bán hàng |
 | `/cart` | Giỏ hàng và mã ưu đãi |
 | `/checkout` | Giao hàng và thanh toán |
 | `/orders/:id` | Chi tiết, tiến trình, hủy đơn và mua lại |
+| `/invoices/:id` | Bản thể hiện hóa đơn điện tử, tải JSON và in/PDF |
 | `/wishlist` | Danh sách yêu thích |
 | `/compare` | Bảng so sánh tối đa ba sản phẩm |
 | `/account` | Hồ sơ và lịch sử mua hàng |
@@ -98,6 +113,7 @@ flowchart LR
 | `/support` | Trung tâm trợ giúp và tra cứu đơn |
 | `/policies/:slug` | Vận chuyển, đổi trả, bảo mật và điều khoản |
 | `/admin` | NOVA Seller Center có mật khẩu bảo vệ |
+| `/seller` | Vận hành gian hàng, phí nền tảng, ví và đối soát |
 
 ## Công nghệ
 
@@ -106,8 +122,9 @@ flowchart LR
 - **Build:** Vite 8.
 - **Runtime:** Node.js `>=22.13.0`.
 - **Hosting:** OpenAI Sites / Cloudflare Workers.
-- **Dữ liệu demo:** `localStorage` và `sessionStorage`.
-- **Sẵn sàng mở rộng:** Drizzle ORM và khai báo Cloudflare D1/R2.
+- **Dữ liệu giao dịch mới:** Cloudflare D1 thông qua Drizzle migrations.
+- **Dữ liệu dự phòng trên thiết bị:** `localStorage` và `sessionStorage`.
+- **Đo lường:** Google Analytics 4 có thể cấu hình và kho sự kiện chuyển đổi nội bộ.
 
 ## Chạy dự án
 
@@ -129,6 +146,7 @@ Tạo tệp `.env.local` từ `.env.example`, sau đó thay giá trị mẫu b�
 
 ```env
 ADMIN_PASSWORD=your-strong-private-password
+GOOGLE_ANALYTICS_ID=G-XXXXXXXXXX
 ```
 
 Khởi động môi trường phát triển:
@@ -194,8 +212,11 @@ Phiên bản hiện tại ưu tiên khả năng trình diễn độc lập, khô
 | `nova-compare` | Tối đa ba sản phẩm trong bảng so sánh |
 | `nova-location-provinces-v2` | Bộ nhớ đệm tỉnh/thành phố theo địa giới hai cấp |
 | `nova-location-wards-v2-*` | Bộ nhớ đệm phường/xã của từng tỉnh/thành phố |
+| `nova-voucher-redemptions` | Lượt sử dụng và ngân sách voucher dự phòng trên thiết bị |
+| `nova-analytics-events` | Tối đa 300 sự kiện chuyển đổi dự phòng trên thiết bị |
+| `nova-business-profile` | Thông tin doanh nghiệp và thuế suất hiển thị trên hóa đơn |
 
-Khi đặt hàng thành công, tồn kho trên trình duyệt hiện tại được trừ tự động.
+Khi đặt hàng thành công, giao dịch, phân bổ nhà bán hàng, voucher, hóa đơn và sự kiện chuyển đổi được gửi tới D1 production; bản sao trên thiết bị vẫn được giữ để trải nghiệm không gián đoạn. Tồn kho trên trình duyệt hiện tại được trừ tự động.
 Sản phẩm hết hàng không thể tăng số lượng hoặc tiếp tục thanh toán. Hủy đơn
 đang chờ xác nhận sẽ hoàn lại số lượng vào kho.
 
@@ -205,9 +226,10 @@ Dữ liệu này chỉ tồn tại trên trình duyệt hiện tại và có th�
 
 Trước khi sử dụng cho cửa hàng thật, cần thay các luồng demo bằng dịch vụ sản xuất:
 
-- Cơ sở dữ liệu D1/PostgreSQL cho sản phẩm, khách hàng và đơn hàng.
+- Chuyển toàn bộ danh mục, khách hàng và tồn kho từ lớp dự phòng trình duyệt sang D1/PostgreSQL tập trung.
 - Xác thực người dùng thực, phân quyền và khôi phục tài khoản.
 - Tích hợp cổng thanh toán có webhook và xác minh chữ ký.
+- Kết nối nhà cung cấp hóa đơn điện tử được cấp phép, chữ ký số và mã cơ quan thuế; bản JSON/PDF hiện tại chỉ là bản demo.
 - Quản lý tồn kho tập trung và chống bán vượt số lượng.
 - Email/SMS xác nhận, vận chuyển và chăm sóc khách hàng.
 - Theo dõi lỗi, audit log, rate limiting và chống gian lận.
