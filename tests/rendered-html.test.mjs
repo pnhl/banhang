@@ -22,15 +22,16 @@ async function render(path = "/") {
   );
 }
 
-test("renders the NOVA Market storefront", async () => {
+test("renders the LOPA MARKET storefront", async () => {
   const response = await render("/");
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /NOVA Market/i);
+  assert.match(html, /LOPA MARKET/i);
+  assert.doesNotMatch(html, /NOVA MARKET/i);
   assert.match(html, /Sản phẩm nổi bật/i);
-  assert.match(html, /NovaSound Air/i);
+  assert.match(html, /LopaSound Air/i);
   assert.doesNotMatch(html, /Your site is taking shape/i);
 });
 
@@ -39,18 +40,19 @@ test("renders the connected commerce routes", async () => {
     ["/cart", "Giỏ hàng"],
     ["/compare", "So sánh sản phẩm"],
     ["/checkout", "Hoàn tất đơn hàng"],
-    ["/orders/NV-DEMO", "Đang tải đơn hàng"],
+    ["/orders/LP-DEMO", "Đang tải đơn hàng"],
     ["/account", "Đăng nhập để quản lý mua sắm"],
     ["/wishlist", "Sản phẩm yêu thích"],
     ["/support", "Trung tâm trợ giúp"],
     ["/login", "Đăng nhập"],
     ["/register", "Đăng ký thành viên"],
-    ["/product/1", "Tai nghe chụp tai NovaSound Air"],
+    ["/product/1", "Tai nghe chụp tai LopaSound Air"],
     ["/product/999999", "Đang tải sản phẩm"],
     ["/category/dien-tu", "Thiết bị điện tử chọn lọc"],
     ["/stores", "Mỗi gian hàng, một chuyên môn"],
-    ["/store/nova-digital", "NOVA Digital"],
-    ["/invoices/NV-DEMO", "Đang chuẩn bị hóa đơn"],
+    ["/store/lopa-digital", "LOPA Digital"],
+    ["/store/nova-digital", "LOPA Digital"],
+    ["/invoices/LP-DEMO", "Đang chuẩn bị hóa đơn"],
     ["/policies/shipping", "Chính sách vận chuyển"],
   ];
 
@@ -75,13 +77,13 @@ test("renders marketplace SEO and protects seller operations", async () => {
   const productHtml = await productResponse.text();
   assert.match(productHtml, /application\/ld\+json/i);
   assert.match(productHtml, /schema\.org/i);
-  assert.match(productHtml, /NOVA Digital/i);
+  assert.match(productHtml, /LOPA Digital/i);
 
   const categoryResponse = await render("/category/dien-tu");
   assert.equal(categoryResponse.status, 200);
   const categoryHtml = await categoryResponse.text();
   assert.match(categoryHtml, /ItemList/i);
-  assert.match(categoryHtml, /NOVA Digital/i);
+  assert.match(categoryHtml, /LOPA Digital/i);
 
   const sellerResponse = await render("/seller");
   assert.equal(sellerResponse.status, 200);
@@ -101,6 +103,6 @@ test("publishes crawler discovery files", async () => {
   assert.equal(sitemapResponse.status, 200);
   const sitemapText = await sitemapResponse.text();
   assert.match(sitemapText, /category\/dien-tu/i);
-  assert.match(sitemapText, /store\/nova-digital/i);
+  assert.match(sitemapText, /store\/lopa-digital/i);
   assert.match(sitemapText, /product\/1/i);
 });

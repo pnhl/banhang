@@ -154,9 +154,9 @@ export function SellerCenter() {
     <main className="seller-center">
       <header className="seller-center-topbar">
         <a className="brand" href="/">
-          <span className="brand-mark">N</span>
+          <span className="brand-mark">L</span>
           <span>
-            NOVA<span>seller</span>
+            LOPA<span>seller</span>
           </span>
         </a>
         <div>
@@ -195,7 +195,7 @@ export function SellerCenter() {
               </b>
             </button>
           ))}
-          <a href="/admin">← Trở lại NOVA Admin</a>
+          <a href="/admin">← Trở lại LOPA Admin</a>
         </aside>
 
         <section className="seller-workspace">

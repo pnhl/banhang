@@ -3,6 +3,7 @@ import type { CartLine, Product } from "./catalog";
 export type Seller = {
   id: string;
   slug: string;
+  aliases?: string[];
   name: string;
   shortName: string;
   tagline: string;
@@ -34,12 +35,13 @@ export type SellerAllocation = {
 export const sellers: Seller[] = [
   {
     id: "nova-digital",
-    slug: "nova-digital",
-    name: "NOVA Digital",
-    shortName: "ND",
+    slug: "lopa-digital",
+    aliases: ["nova-digital"],
+    name: "LOPA Digital",
+    shortName: "LD",
     tagline: "Công nghệ chọn lọc, bảo hành rõ ràng",
     description:
-      "Gian hàng điện tử và thiết bị sáng tạo được NOVA xác minh, tập trung vào sản phẩm có trải nghiệm sử dụng tốt và hậu mãi minh bạch.",
+      "Gian hàng điện tử và thiết bị sáng tạo được LOPA xác minh, tập trung vào sản phẩm có trải nghiệm sử dụng tốt và hậu mãi minh bạch.",
     location: "TP. Hồ Chí Minh",
     rating: 4.9,
     followers: "18,6k",
@@ -48,8 +50,8 @@ export const sellers: Seller[] = [
     commissionRate: 0.055,
     accent: "#173f35",
     verified: true,
-    taxCode: "MST-DEMO-ND01",
-    supportEmail: "digital@novamarket.vn",
+    taxCode: "MST-DEMO-LD01",
+    supportEmail: "digital@lopamarket.vn",
     productIds: [1, 4, 8, 9],
   },
   {
@@ -69,7 +71,7 @@ export const sellers: Seller[] = [
     accent: "#d95f45",
     verified: true,
     taxCode: "MST-DEMO-CL02",
-    supportEmail: "cloud@novamarket.vn",
+    supportEmail: "cloud@lopamarket.vn",
     productIds: [2, 3, 7],
   },
   {
@@ -89,7 +91,7 @@ export const sellers: Seller[] = [
     accent: "#879b78",
     verified: true,
     taxCode: "MST-DEMO-ND03",
-    supportEmail: "nest@novamarket.vn",
+    supportEmail: "nest@lopamarket.vn",
     productIds: [5, 6, 10],
   },
 ];
@@ -98,7 +100,9 @@ export const getSellerById = (id?: string) =>
   sellers.find((seller) => seller.id === id) ?? sellers[0];
 
 export const getSellerBySlug = (slug: string) =>
-  sellers.find((seller) => seller.slug === slug);
+  sellers.find(
+    (seller) => seller.slug === slug || seller.aliases?.includes(slug),
+  );
 
 export const getSellerForProduct = (productId: number) =>
   sellers.find((seller) => seller.productIds.includes(productId)) ?? sellers[0];

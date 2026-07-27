@@ -81,17 +81,17 @@ const createProductDraft = (): ProductDraft => ({
 
 const seededOrders: AdminOrder[] = [
   {
-    id: "NV240726",
+    id: "LP240726",
     customer: "Minh Anh",
     email: "minhanh@example.com",
-    product: "NovaSound Air",
+    product: "LopaSound Air",
     value: 1290000,
     status: "Chờ xác nhận",
     time: "10 phút trước",
     local: false,
   },
   {
-    id: "NV240725",
+    id: "LP240725",
     customer: "Hoàng Nam",
     email: "hoangnam@example.com",
     product: "Cloud Walk × 2",
@@ -101,7 +101,7 @@ const seededOrders: AdminOrder[] = [
     local: false,
   },
   {
-    id: "NV240724",
+    id: "LP240724",
     customer: "Thùy Dương",
     email: "thuyduong@example.com",
     product: "Dew Lab",
@@ -111,7 +111,7 @@ const seededOrders: AdminOrder[] = [
     local: false,
   },
   {
-    id: "NV240723",
+    id: "LP240723",
     customer: "Quốc Bảo",
     email: "quocbao@example.com",
     product: "Studio 75",
@@ -243,7 +243,7 @@ export function AdminDashboard() {
   const visibleProducts = useMemo(
     () =>
       managedProducts.filter((product) =>
-        `${product.name} ${product.category} NOVA-${String(product.id).padStart(4, "0")}`
+        `${product.name} ${product.category} LOPA-${String(product.id).padStart(4, "0")}`
           .toLowerCase()
           .includes(search.toLowerCase()),
       ),
@@ -540,7 +540,7 @@ export function AdminDashboard() {
     );
     const link = document.createElement("a");
     link.href = url;
-    link.download = `nova-orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `lopa-orders-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
     flash(`Đã xuất ${visibleOrders.length} đơn hàng.`);
@@ -555,15 +555,15 @@ export function AdminDashboard() {
     <main className="admin-shell">
         <aside className="admin-sidebar">
         <a className="brand" href="/">
-          <span className="brand-mark">N</span>
+          <span className="brand-mark">L</span>
           <span>
-            NOVA<span>seller center</span>
+            LOPA<span>seller center</span>
           </span>
         </a>
         <div className="store-switch">
-          <span>NS</span>
+          <span>LS</span>
           <p>
-            <b>NOVA Official Store</b>
+            <b>LOPA Official Store</b>
             <small>Gian hàng chính hãng</small>
           </p>
           <button aria-label="Đổi gian hàng">⌄</button>
@@ -647,7 +647,7 @@ export function AdminDashboard() {
           <div className="admin-content">
             <div className="admin-heading">
               <div>
-                <p className="eyebrow">NOVA SELLER CENTER</p>
+                <p className="eyebrow">LOPA SELLER CENTER</p>
                 <h1>Chào buổi sáng, Long.</h1>
                 <p>Dữ liệu đơn mới trên thiết bị này được cập nhật tự động.</p>
               </div>
@@ -796,7 +796,7 @@ export function AdminDashboard() {
                 <div key={product.id}>
                   <span>
                     <img src={product.image} alt="" />
-                    <p><b>{product.name}</b><small>SKU: NOVA-{String(product.id).padStart(4, "0")}</small></p>
+                    <p><b>{product.name}</b><small>SKU: LOPA-{String(product.id).padStart(4, "0")}</small></p>
                   </span>
                   <strong>{formatPrice(product.price)}</strong>
                   <span className="stock-editor">
@@ -1042,7 +1042,7 @@ export function AdminDashboard() {
                       }))
                     }
                   >
-                    <option value="">Toàn sàn NOVA</option>
+                    <option value="">Toàn sàn LOPA</option>
                     {sellers.map((seller) => (
                       <option value={seller.id} key={seller.id}>
                         {seller.name}
@@ -1312,7 +1312,7 @@ export function AdminDashboard() {
                 );
               })}
               <small>
-                Các sự kiện chuẩn được gửi đồng thời tới kho phân tích NOVA và
+                Các sự kiện chuẩn được gửi đồng thời tới kho phân tích LOPA và
                 Google Analytics khi biến GOOGLE_ANALYTICS_ID được cấu hình.
               </small>
             </section>

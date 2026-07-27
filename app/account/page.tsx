@@ -63,7 +63,7 @@ export default function AccountPage() {
         <SiteHeader />
         <main className="account-empty">
           <span>♙</span>
-          <p className="eyebrow">TÀI KHOẢN NOVA</p>
+          <p className="eyebrow">TÀI KHOẢN LOPA</p>
           <h1>Đăng nhập để quản lý mua sắm.</h1>
           <p>Xem lịch sử đơn hàng, thông tin giao hàng và sản phẩm yêu thích tại một nơi.</p>
           <div><a href="/login">Đăng nhập</a><a href="/register">Tạo tài khoản</a></div>
@@ -79,13 +79,13 @@ export default function AccountPage() {
       <main className="account-page wrap">
         <header>
           <div className="account-avatar">{profile.name.slice(0, 1).toUpperCase()}</div>
-          <div><p className="eyebrow">THÀNH VIÊN NOVA</p><h1>Xin chào, {profile.name}.</h1><p>{profile.email} · {profile.phone || "Chưa thêm số điện thoại"}</p></div>
+          <div><p className="eyebrow">THÀNH VIÊN LOPA</p><h1>Xin chào, {profile.name}.</h1><p>{profile.email} · {profile.phone || "Chưa thêm số điện thoại"}</p></div>
           <button onClick={() => { signOutDemo(); setProfile(null); }}>Đăng xuất</button>
         </header>
         <section className="account-stats">
           <article><span>Đơn hàng</span><strong>{orders.length}</strong><small>Trên thiết bị này</small></article>
           <article><span>Tổng mua sắm</span><strong>{formatPrice(totalSpent)}</strong><small>Giá trị đơn đã tạo</small></article>
-          <article><span>Hạng thành viên</span><strong>NOVA Seed</strong><small>Còn 2 đơn để lên hạng</small></article>
+          <article><span>Hạng thành viên</span><strong>LOPA Seed</strong><small>Còn 2 đơn để lên hạng</small></article>
         </section>
         <div className="account-grid">
           <section className="account-orders">

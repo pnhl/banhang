@@ -111,10 +111,10 @@ export default function CartPage() {
       setVoucherMessage(validation.message);
       return;
     }
-    setVoucher(code);
-    setAppliedCode(code);
+    setVoucher(validation.code);
+    setAppliedCode(validation.code);
     setDiscount(validation.discount);
-    window.sessionStorage.setItem("nova-voucher", code);
+    window.sessionStorage.setItem("nova-voucher", validation.code);
     setVoucherMessage(`✓ ${validation.voucher.label} · ${validation.message}`);
     trackCommerceEvent("select_promotion", {
       promotion_id: validation.voucher.code,

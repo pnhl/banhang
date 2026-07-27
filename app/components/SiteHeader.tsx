@@ -50,13 +50,13 @@ export function SiteHeader() {
     <>
       <header className="site-header">
         <div className="site-header-main wrap">
-          <a className="brand" href="/" aria-label="NOVA Market - Trang chủ">
-            <span className="brand-mark">N</span>
-            <span>NOVA<span>market</span></span>
+          <a className="brand" href="/" aria-label="LOPA MARKET - Trang chủ">
+            <span className="brand-mark">L</span>
+            <span>LOPA<span>MARKET</span></span>
           </a>
           <form className="site-search" onSubmit={search}>
             <span>⌕</span>
-            <input name="q" aria-label="Tìm sản phẩm" placeholder="Tìm kiếm trong NOVA Market" />
+            <input name="q" aria-label="Tìm sản phẩm" placeholder="Tìm kiếm trong LOPA MARKET" />
             <button>Tìm kiếm</button>
           </form>
           <nav className="site-header-actions" aria-label="Tài khoản và giỏ hàng">

@@ -245,7 +245,7 @@ export function ProductDetailClient({
           <div className="thumbs"><button className="active"><img src={product.image} alt="" /></button><button><img src={product.image} alt="" /></button><button><img src={product.image} alt="" /></button></div>
         </div>
         <div className="product-page-info">
-          <p className="eyebrow">NOVA CHOICE · {product.category}</p>
+          <p className="eyebrow">LOPA CHOICE · {product.category}</p>
           <h1>{product.name}</h1>
           <div className="detail-rating"><b>★ {reviewAverage.toFixed(1)}</b><span>{reviews.length} đánh giá đã duyệt</span><span>Đã bán {product.sold}</span></div>
           <div className="detail-price"><strong>{formatPrice(product.price)}</strong><del>{formatPrice(product.oldPrice)}</del><b>Tiết kiệm {Math.round((1 - product.price / product.oldPrice) * 100)}%</b></div>
@@ -292,8 +292,8 @@ export function ProductDetailClient({
           <button className={tab === "specs" ? "active" : ""} onClick={() => setTab("specs")}>Thông số</button>
           <button className={tab === "reviews" ? "active" : ""} onClick={() => setTab("reviews")}>Đánh giá ({reviews.length})</button>
         </div>
-        {tab === "description" && <div className="tab-copy"><h2>Được thiết kế cho nhịp sống hiện đại</h2><p>{product.description} Mỗi chi tiết đều được lựa chọn kỹ để cân bằng giữa thẩm mỹ, độ bền và trải nghiệm sử dụng hằng ngày.</p><div className="feature-grid"><div><b>01</b><h3>Thiết kế tinh giản</h3><p>Dễ phối hợp trong mọi không gian và phong cách cá nhân.</p></div><div><b>02</b><h3>Vật liệu tuyển chọn</h3><p>Bền bỉ, dễ chăm sóc và an toàn trong quá trình sử dụng.</p></div><div><b>03</b><h3>Bảo hành rõ ràng</h3><p>Hỗ trợ chính hãng trong 12 tháng tại hệ thống NOVA.</p></div></div></div>}
-        {tab === "specs" && <div className="spec-table"><p><span>Thương hiệu</span><b>NOVA Selection</b></p><p><span>Xuất xứ</span><b>Thiết kế tại Việt Nam</b></p><p><span>Bảo hành</span><b>12 tháng</b></p><p><span>Đóng gói</span><b>Sản phẩm, phụ kiện, hướng dẫn</b></p></div>}
+        {tab === "description" && <div className="tab-copy"><h2>Được thiết kế cho nhịp sống hiện đại</h2><p>{product.description} Mỗi chi tiết đều được lựa chọn kỹ để cân bằng giữa thẩm mỹ, độ bền và trải nghiệm sử dụng hằng ngày.</p><div className="feature-grid"><div><b>01</b><h3>Thiết kế tinh giản</h3><p>Dễ phối hợp trong mọi không gian và phong cách cá nhân.</p></div><div><b>02</b><h3>Vật liệu tuyển chọn</h3><p>Bền bỉ, dễ chăm sóc và an toàn trong quá trình sử dụng.</p></div><div><b>03</b><h3>Bảo hành rõ ràng</h3><p>Hỗ trợ chính hãng trong 12 tháng tại hệ thống LOPA.</p></div></div></div>}
+        {tab === "specs" && <div className="spec-table"><p><span>Thương hiệu</span><b>LOPA Selection</b></p><p><span>Xuất xứ</span><b>Thiết kế tại Việt Nam</b></p><p><span>Bảo hành</span><b>12 tháng</b></p><p><span>Đóng gói</span><b>Sản phẩm, phụ kiện, hướng dẫn</b></p></div>}
         {tab === "reviews" && (
           <div className="review-experience">
             <aside className="review-summary">

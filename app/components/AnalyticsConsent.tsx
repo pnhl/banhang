@@ -35,7 +35,7 @@ export function AnalyticsConsent({ enabled }: { enabled: boolean }) {
       <div>
         <b>Đo lường để cải thiện trải nghiệm</b>
         <p>
-          NOVA chỉ bật Google Analytics khi bạn đồng ý. Dữ liệu quảng cáo vẫn
+          LOPA chỉ bật Google Analytics khi bạn đồng ý. Dữ liệu quảng cáo vẫn
           được tắt.
         </p>
       </div>

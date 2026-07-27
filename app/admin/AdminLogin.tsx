@@ -31,9 +31,9 @@ export function AdminLogin({ configured }: { configured: boolean }) {
     <main className="admin-login-page">
       <section className="admin-login-card">
         <a className="brand" href="/">
-          <span className="brand-mark">N</span>
+          <span className="brand-mark">L</span>
           <span>
-            NOVA<span>seller center</span>
+            LOPA<span>seller center</span>
           </span>
         </a>
         <div className="admin-login-icon">⌁</div>
@@ -72,4 +72,3 @@ export function AdminLogin({ configured }: { configured: boolean }) {
     </main>
   );
 }
-

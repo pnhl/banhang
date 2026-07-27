@@ -32,7 +32,7 @@ export async function generateMetadata({
       description: category.description,
       url: `/category/${category.slug}`,
       type: "website",
-      images: ["/og-marketplace.png"],
+      images: ["/og.png"],
     },
   };
 }
@@ -83,7 +83,7 @@ export default async function CategoryPage({
         >
           <div className="wrap">
             <div>
-              <p className="eyebrow">DANH MỤC NOVA</p>
+              <p className="eyebrow">DANH MỤC LOPA</p>
               <h1>{category.title}</h1>
               <p>{category.description}</p>
             </div>

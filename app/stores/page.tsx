@@ -7,7 +7,7 @@ import { sellers } from "../lib/marketplace";
 export const metadata: Metadata = {
   title: "Gian hàng chính hãng",
   description:
-    "Khám phá các nhà bán hàng đã xác minh, chính sách rõ ràng và danh mục được tuyển chọn trên NOVA Market.",
+    "Khám phá các nhà bán hàng đã xác minh, chính sách rõ ràng và danh mục được tuyển chọn trên LOPA MARKET.",
   alternates: { canonical: "/stores" },
 };
 
@@ -17,7 +17,7 @@ export default function StoresPage() {
       <SiteHeader />
       <main className="stores-page wrap">
         <header>
-          <p className="eyebrow">NOVA MARKETPLACE</p>
+          <p className="eyebrow">LOPA MARKETPLACE</p>
           <h1>Mỗi gian hàng, một chuyên môn.</h1>
           <p>
             Khám phá các nhà bán hàng đã xác minh, theo dõi uy tín và mua sản

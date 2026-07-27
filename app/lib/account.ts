@@ -1,6 +1,10 @@
-import type { CartLine } from "./catalog";
+import {
+  normalizeProductBrand,
+  normalizeVoucherCode,
+  type CartLine,
+} from "./catalog";
 import type { BusinessProfile } from "./invoicing";
-import { createInvoiceNumber } from "./invoicing";
+import { createInvoiceNumber, normalizeBusinessProfile } from "./invoicing";
 import type { SellerAllocation } from "./marketplace";
 
 export type AccountProfile = {
@@ -58,8 +62,15 @@ function readJson<T>(key: string, fallback: T): T {
   }
 }
 
+function normalizeProfile(profile: AccountProfile): AccountProfile {
+  return profile.email.toLowerCase() === "member@nova.local"
+    ? { ...profile, email: "member@lopa.local" }
+    : profile;
+}
+
 export function getProfile(): AccountProfile | null {
-  return readJson<AccountProfile | null>(PROFILE_KEY, null);
+  const profile = readJson<AccountProfile | null>(PROFILE_KEY, null);
+  return profile ? normalizeProfile(profile) : null;
 }
 
 export function saveProfile(profile: AccountProfile) {
@@ -73,7 +84,24 @@ export function signOutDemo() {
 }
 
 export function getOrders(): NovaOrder[] {
-  return readJson<NovaOrder[]>(ORDERS_KEY, []);
+  return readJson<NovaOrder[]>(ORDERS_KEY, []).map((order) => ({
+    ...order,
+    customer: normalizeProfile(order.customer),
+    items: order.items.map(normalizeProductBrand),
+    voucherCode: order.voucherCode
+      ? normalizeVoucherCode(order.voucherCode)
+      : undefined,
+    business: order.business
+      ? normalizeBusinessProfile(order.business)
+      : undefined,
+    sellerAllocations: order.sellerAllocations?.map((allocation) => ({
+      ...allocation,
+      sellerName:
+        allocation.sellerName === "NOVA Digital"
+          ? "LOPA Digital"
+          : allocation.sellerName,
+    })),
+  }));
 }
 
 export function getOrder(id: string) {
@@ -89,7 +117,7 @@ export function createOrder(
   order: Omit<NovaOrder, "id" | "createdAt" | "status">,
 ) {
   const now = new Date();
-  const id = `NV${now
+  const id = `LP${now
     .toISOString()
     .slice(2, 10)
     .replaceAll("-", "")}${String(now.getTime()).slice(-4)}`;

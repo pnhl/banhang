@@ -104,8 +104,8 @@ export function OrderDetailClient({ orderId }: { orderId: string }) {
       <main className="order-detail-page wrap">
         <div className="invoice-print-header">
           <div>
-            <span className="brand-mark">N</span>
-            <p><b>NOVA MARKET</b><small>HÓA ĐƠN BÁN HÀNG</small></p>
+            <span className="brand-mark">L</span>
+            <p><b>LOPA MARKET</b><small>HÓA ĐƠN BÁN HÀNG</small></p>
           </div>
           <p>Mã hóa đơn: #{order.id}</p>
         </div>
@@ -139,7 +139,7 @@ export function OrderDetailClient({ orderId }: { orderId: string }) {
                 <b>{status}</b>
                 <small>
                   {index === 0
-                    ? "NOVA đã nhận đơn"
+                    ? "LOPA đã nhận đơn"
                     : index === 1
                       ? "Chuẩn bị sản phẩm"
                       : index === 2

@@ -342,7 +342,7 @@ export default function CheckoutPage() {
         <main className="order-success">
           <span>✓</span>
           <p className="eyebrow">ĐẶT HÀNG THÀNH CÔNG</p>
-          <h1>Cảm ơn bạn đã chọn NOVA.</h1>
+          <h1>Cảm ơn bạn đã chọn LOPA.</h1>
           <p>
             Mã đơn <b>#{orderId}</b> đã được lưu vào lịch sử mua hàng trên thiết
             bị này.

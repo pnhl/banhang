@@ -27,15 +27,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     metadataBase,
-    applicationName: "NOVA Market",
+    applicationName: "LOPA MARKET",
     title: {
-      default: "NOVA Market — Món hay mỗi ngày",
-      template: "%s | NOVA Market",
+      default: "LOPA MARKET — Món hay mỗi ngày",
+      template: "%s | LOPA MARKET",
     },
     description:
       "Sàn mua sắm hiện đại với sản phẩm chọn lọc, giá tốt và giao hàng nhanh.",
     keywords: [
-      "NOVA Market",
+      "LOPA MARKET",
       "mua sắm trực tuyến",
       "sàn thương mại điện tử",
       "gian hàng chính hãng",
@@ -44,26 +44,26 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: { canonical: "/" },
     robots: { index: true, follow: true },
     openGraph: {
-      title: "NOVA Market — Món hay mỗi ngày",
+      title: "LOPA MARKET — Món hay mỗi ngày",
       description: "Chọn hàng chất, săn ưu đãi thật và nhận tận tay nhanh hơn.",
       type: "website",
       locale: "vi_VN",
-      siteName: "NOVA Market",
+      siteName: "LOPA MARKET",
       url: "/",
       images: [
         {
-          url: "/og-marketplace.png",
+          url: "/og.png",
           width: 1672,
           height: 941,
-          alt: "NOVA Market — Mỗi gian hàng, một chuyên môn",
+          alt: "LOPA MARKET — Mỗi gian hàng, một chuyên môn",
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: "NOVA Market — Món hay mỗi ngày",
+      title: "LOPA MARKET — Món hay mỗi ngày",
       description: "Chọn hàng chất, săn ưu đãi thật và nhận tận tay nhanh hơn.",
-      images: ["/og-marketplace.png"],
+      images: ["/og.png"],
     },
     icons: { icon: "/favicon.svg" },
   };
@@ -81,7 +81,7 @@ export default async function RootLayout({
       {
         "@type": "Organization",
         "@id": `${SITE_URL}/#organization`,
-        name: "NOVA Market",
+        name: "LOPA MARKET",
         url: SITE_URL,
         logo: `${SITE_URL}/favicon.svg`,
       },
@@ -89,7 +89,7 @@ export default async function RootLayout({
         "@type": "WebSite",
         "@id": `${SITE_URL}/#website`,
         url: SITE_URL,
-        name: "NOVA Market",
+        name: "LOPA MARKET",
         inLanguage: "vi-VN",
         publisher: { "@id": `${SITE_URL}/#organization` },
         potentialAction: {

@@ -16,7 +16,7 @@ const faqs = [
       "Bạn có thể hủy khi đơn còn ở trạng thái Chờ xác nhận. Khi đơn đã đóng gói hoặc giao cho đơn vị vận chuyển, hãy liên hệ hỗ trợ.",
   },
   {
-    question: "NOVA hỗ trợ những phương thức thanh toán nào?",
+    question: "LOPA hỗ trợ những phương thức thanh toán nào?",
     answer:
       "Bản demo mô phỏng ví điện tử, thẻ ngân hàng, chuyển khoản và thanh toán khi nhận hàng. Website không thu thập dữ liệu tài chính thật.",
   },
@@ -51,12 +51,12 @@ export default function SupportPage() {
       <main className="support-page">
         <header>
           <div className="wrap">
-            <p className="eyebrow">NOVA CARE</p>
+            <p className="eyebrow">LOPA CARE</p>
             <h1>Chúng tôi có thể giúp gì cho bạn?</h1>
             <p>Tra cứu đơn, tìm câu trả lời hoặc gửi yêu cầu hỗ trợ trong vài phút.</p>
             <form onSubmit={lookup}>
               <span>⌕</span>
-              <input required name="orderId" placeholder="Nhập mã đơn, ví dụ NV2607241234" aria-label="Mã đơn hàng" />
+              <input required name="orderId" placeholder="Nhập mã đơn, ví dụ LP2607241234" aria-label="Mã đơn hàng" />
               <button>Tra cứu đơn</button>
             </form>
           </div>
@@ -66,7 +66,7 @@ export default function SupportPage() {
           <a href="/account"><span>▤</span><b>Đơn hàng của tôi</b><small>Xem trạng thái và mua lại</small></a>
           <a href="/policies/shipping"><span>⚡</span><b>Giao hàng</b><small>Thời gian và phạm vi giao</small></a>
           <a href="/policies/returns"><span>↺</span><b>Đổi trả</b><small>Điều kiện trong 15 ngày</small></a>
-          <a href="/policies/privacy"><span>♢</span><b>Bảo mật</b><small>Cách NOVA bảo vệ dữ liệu</small></a>
+          <a href="/policies/privacy"><span>♢</span><b>Bảo mật</b><small>Cách LOPA bảo vệ dữ liệu</small></a>
         </section>
 
         <div className="support-grid wrap">
@@ -85,7 +85,7 @@ export default function SupportPage() {
 
           <section className="support-contact">
             <p className="eyebrow">GỬI YÊU CẦU</p>
-            <h2>Liên hệ NOVA Care</h2>
+            <h2>Liên hệ LOPA Care</h2>
             <p>Đội ngũ hỗ trợ demo phản hồi trong giờ làm việc 08:00–22:00.</p>
             <form onSubmit={submit}>
               <label>Họ và tên<input required name="name" placeholder="Nguyễn Minh Anh" /></label>

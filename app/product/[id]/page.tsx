@@ -49,7 +49,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           name: product.name,
           image: [product.image],
           description: product.description,
-          sku: `NOVA-${String(product.id).padStart(4, "0")}`,
+          sku: `LOPA-${String(product.id).padStart(4, "0")}`,
           brand: { "@type": "Brand", name: seller.name },
           offers: {
             "@type": "Offer",

@@ -12,7 +12,10 @@ import {
 import { SITE_URL } from "../../lib/seo";
 
 export function generateStaticParams() {
-  return sellers.map((seller) => ({ slug: seller.slug }));
+  return sellers.flatMap((seller) => [
+    { slug: seller.slug },
+    ...(seller.aliases ?? []).map((slug) => ({ slug })),
+  ]);
 }
 
 export async function generateMetadata({
@@ -31,7 +34,7 @@ export async function generateMetadata({
       title: seller.name,
       description: seller.tagline,
       url: `/store/${seller.slug}`,
-      images: ["/og-marketplace.png"],
+      images: ["/og.png"],
     },
   };
 }

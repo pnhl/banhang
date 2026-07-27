@@ -36,7 +36,7 @@ export function InvoiceClient({ orderId }: { orderId: string }) {
     order.business ?? getBusinessProfile() ?? defaultBusinessProfile;
   const download = () => {
     const payload = {
-      specification: "NOVA_EINVOICE_DEMO_V1",
+      specification: "LOPA_EINVOICE_DEMO_V1",
       legalStatus: "demo-not-tax-authority-issued",
       order,
     };
@@ -63,7 +63,7 @@ export function InvoiceClient({ orderId }: { orderId: string }) {
       <article className="einvoice-sheet">
         <header>
           <div className="einvoice-brand">
-            <span className="brand-mark">N</span>
+            <span className="brand-mark">L</span>
             <p>
               <b>{business.name}</b>
               <small>BẢN THỂ HIỆN HÓA ĐƠN ĐIỆN TỬ</small>
@@ -168,7 +168,7 @@ export function InvoiceClient({ orderId }: { orderId: string }) {
             Đây là bản thể hiện hóa đơn điện tử ở chế độ demo, chưa có mã cơ
             quan thuế hoặc chữ ký số và không thay thế hóa đơn hợp pháp.
           </p>
-          <span>Tra cứu nội bộ: NOVA/{order.id}</span>
+          <span>Tra cứu nội bộ: LOPA/{order.id}</span>
         </footer>
       </article>
     </main>

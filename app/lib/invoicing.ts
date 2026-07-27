@@ -10,13 +10,28 @@ export type BusinessProfile = {
 export const BUSINESS_PROFILE_KEY = "nova-business-profile";
 
 export const defaultBusinessProfile: BusinessProfile = {
-  name: "NOVA MARKET",
+  name: "LOPA MARKET",
   taxCode: "Đang cập nhật",
   address: "Việt Nam",
-  email: "hoadon@novamarket.vn",
-  invoiceSeries: "1C26TNV",
+  email: "hoadon@lopamarket.vn",
+  invoiceSeries: "1C26TLP",
   vatRate: 0.1,
 };
+
+export function normalizeBusinessProfile(
+  profile: BusinessProfile,
+): BusinessProfile {
+  return {
+    ...profile,
+    name: profile.name === "NOVA MARKET" ? "LOPA MARKET" : profile.name,
+    email:
+      profile.email.toLowerCase() === "hoadon@novamarket.vn"
+        ? "hoadon@lopamarket.vn"
+        : profile.email,
+    invoiceSeries:
+      profile.invoiceSeries === "1C26TNV" ? "1C26TLP" : profile.invoiceSeries,
+  };
+}
 
 export function getBusinessProfile(): BusinessProfile {
   if (typeof window === "undefined") return defaultBusinessProfile;
@@ -24,7 +39,9 @@ export function getBusinessProfile(): BusinessProfile {
     const value = JSON.parse(
       window.localStorage.getItem(BUSINESS_PROFILE_KEY) ?? "null",
     ) as Partial<BusinessProfile> | null;
-    return value ? { ...defaultBusinessProfile, ...value } : defaultBusinessProfile;
+    return value
+      ? normalizeBusinessProfile({ ...defaultBusinessProfile, ...value })
+      : defaultBusinessProfile;
   } catch {
     return defaultBusinessProfile;
   }

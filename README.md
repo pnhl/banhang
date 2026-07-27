@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="./public/og-marketplace.png" alt="NOVA Market — Mỗi gian hàng, một chuyên môn" width="100%" />
+  <img src="./public/og.png" alt="LOPA MARKET — Mỗi gian hàng, một chuyên môn" width="100%" />
 
-  <h1>NOVA Market</h1>
+  <h1>LOPA MARKET</h1>
 
   <p>
     Trải nghiệm thương mại điện tử hiện đại dành cho thị trường Việt Nam.<br />
@@ -29,7 +29,7 @@
 
 ## Tổng quan
 
-NOVA Market là một website bán hàng đa trang, tập trung vào trải nghiệm mua sắm liền mạch và giao diện tiếng Việt thân thiện trên cả máy tính lẫn thiết bị di động.
+LOPA MARKET là một website bán hàng đa trang, tập trung vào trải nghiệm mua sắm liền mạch và giao diện tiếng Việt thân thiện trên cả máy tính lẫn thiết bị di động.
 
 Dự án mô phỏng đầy đủ hành trình của khách hàng và người vận hành:
 
@@ -112,7 +112,7 @@ flowchart LR
 | `/login`, `/register` | Đăng nhập và đăng ký demo |
 | `/support` | Trung tâm trợ giúp và tra cứu đơn |
 | `/policies/:slug` | Vận chuyển, đổi trả, bảo mật và điều khoản |
-| `/admin` | NOVA Seller Center có mật khẩu bảo vệ |
+| `/admin` | LOPA Seller Center có mật khẩu bảo vệ |
 | `/seller` | Vận hành gian hàng, phí nền tảng, ví và đối soát |
 
 ## Công nghệ
@@ -268,6 +268,6 @@ Bộ kiểm thử xác nhận trang chủ, các route thương mại chính và 
 ---
 
 <div align="center">
-  <strong>NOVA Market</strong><br />
+  <strong>LOPA MARKET</strong><br />
   Chọn kỹ từng món. Giao nhanh từng đơn. Mua sắm nhẹ nhàng hơn mỗi ngày.
 </div>

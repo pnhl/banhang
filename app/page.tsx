@@ -42,7 +42,7 @@ type CartLine = Product & { quantity: number };
 const products: Product[] = [
   {
     id: 1,
-    name: "Tai nghe chụp tai NovaSound Air",
+    name: "Tai nghe chụp tai LopaSound Air",
     category: "Điện tử",
     price: 1290000,
     oldPrice: 1790000,
@@ -130,7 +130,7 @@ const products: Product[] = [
   },
   {
     id: 8,
-    name: "Điện thoại Nova X Lite 5G",
+    name: "Điện thoại Lopa X Lite 5G",
     category: "Điện tử",
     price: 6490000,
     oldPrice: 7290000,
@@ -402,9 +402,9 @@ export default function Home() {
     <main>
       <header className="topbar">
         <div className="topbar-inner">
-          <a className="brand" href="#top" aria-label="NOVA Market - Trang chủ">
-            <span className="brand-mark">N</span>
-            <span>NOVA<span>market</span></span>
+          <a className="brand" href="#top" aria-label="LOPA MARKET - Trang chủ">
+            <span className="brand-mark">L</span>
+            <span>LOPA<span>MARKET</span></span>
           </a>
           <div className="search-shell">
             <span aria-hidden="true">⌕</span>
@@ -445,7 +445,7 @@ export default function Home() {
 
       <section className="hero" id="top">
         <div className="hero-copy">
-          <p className="eyebrow">NOVA SALE · 24–28.07</p>
+          <p className="eyebrow">LOPA SALE · 24–28.07</p>
           <h1>Món hay mỗi ngày.<br /><em>Giá nhẹ tênh.</em></h1>
           <p>Chọn hàng chất, săn ưu đãi thật và nhận tận tay nhanh hơn bạn nghĩ.</p>
           <div className="hero-cta">
@@ -680,21 +680,21 @@ export default function Home() {
           <div><span>↺</span><p><b>Đổi trả dễ dàng</b><small>Miễn phí trong 15 ngày</small></p></div>
           <div><span>♢</span><p><b>Thanh toán an toàn</b><small>Mã hóa theo chuẩn quốc tế</small></p></div>
           <div><span>⚡</span><p><b>Giao hàng thần tốc</b><small>Theo dõi đơn theo thời gian thực</small></p></div>
-          <div><span>◎</span><p><b>Hỗ trợ tận tâm</b><small>Chat cùng NOVA 24/7</small></p></div>
+          <div><span>◎</span><p><b>Hỗ trợ tận tâm</b><small>Chat cùng LOPA 24/7</small></p></div>
         </div>
       </section>
 
       <footer>
         <div className="wrap footer-grid">
           <div className="footer-brand">
-            <a className="brand" href="#top"><span className="brand-mark">N</span><span>NOVA<span>market</span></span></a>
+            <a className="brand" href="#top"><span className="brand-mark">L</span><span>LOPA<span>MARKET</span></span></a>
             <p>Chọn kỹ từng món. Giao nhanh từng đơn. Mua sắm nhẹ nhàng hơn mỗi ngày.</p>
           </div>
-          <div><h4>Về NOVA</h4><a href="/admin">Kênh quản trị</a><a href="/register">Đăng ký</a><a href="/policies/terms">Điều khoản</a></div>
+          <div><h4>Về LOPA</h4><a href="/admin">Kênh quản trị</a><a href="/register">Đăng ký</a><a href="/policies/terms">Điều khoản</a></div>
           <div><h4>Hỗ trợ</h4><a href="/policies/privacy">Bảo mật</a><a href="/policies/returns">Chính sách đổi trả</a><a href="/policies/shipping">Vận chuyển</a></div>
           <div><h4>Nhận tin ưu đãi</h4><p>Deal tốt, không gửi dồn.</p><form onSubmit={(e) => { e.preventDefault(); setToast("Đăng ký nhận tin thành công!"); }}><input placeholder="Email của bạn" type="email" required /><button>→</button></form></div>
         </div>
-        <div className="wrap copyright"><span>© 2026 NOVA Market</span><span>Made for brighter shopping.</span></div>
+        <div className="wrap copyright"><span>© 2026 LOPA MARKET</span><span>Made for brighter shopping.</span></div>
       </footer>
 
       <nav className="mobile-nav" aria-label="Điều hướng di động">
@@ -710,13 +710,13 @@ export default function Home() {
             <button className="modal-close" onClick={() => setSelected(null)} aria-label="Đóng">×</button>
             <div className="modal-gallery"><img src={selected.image} alt={selected.name} /><div><button className="active">1</button><button>2</button><button>3</button></div></div>
             <div className="modal-detail">
-              <p className="eyebrow">{selected.category} · NOVA CHOICE</p>
+              <p className="eyebrow">{selected.category} · LOPA CHOICE</p>
               <h2>{selected.name}</h2>
               <div className="rating"><span>★</span> {selected.rating} <small>· 248 đánh giá · Đã bán {selected.sold}</small></div>
               <div className="modal-price"><strong>{formatPrice(selected.price)}</strong><del>{formatPrice(selected.oldPrice)}</del><b>-{Math.round((1 - selected.price / selected.oldPrice) * 100)}%</b></div>
               <p className="description">{selected.description}</p>
               <div className="variant"><b>Màu sắc</b><div><button className="active">Tiêu chuẩn</button><button>Than chì</button><button>Cát nhạt</button></div></div>
-              <ul><li>✓ Sản phẩm chính hãng 100%</li><li>✓ Đổi trả miễn phí trong 15 ngày</li><li>✓ Bảo hành 12 tháng tại NOVA</li></ul>
+              <ul><li>✓ Sản phẩm chính hãng 100%</li><li>✓ Đổi trả miễn phí trong 15 ngày</li><li>✓ Bảo hành 12 tháng tại LOPA</li></ul>
               <a className="detail-page-link" href={`/product/${selected.id}`}>Xem trang chi tiết đầy đủ →</a>
               <button
                 className={`quick-compare ${compareIds.includes(selected.id) ? "active" : ""}`}
@@ -769,9 +769,9 @@ export default function Home() {
         <div className="modal-backdrop" onMouseDown={() => setLoginOpen(false)}>
           <section className="login-modal" role="dialog" aria-modal="true" aria-label="Đăng nhập" onMouseDown={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setLoginOpen(false)}>×</button>
-            <div className="login-art"><div className="brand-mark">N</div><h2>Chào bạn trở lại.</h2><p>Đăng nhập để theo dõi đơn, lưu sản phẩm yêu thích và nhận ưu đãi riêng.</p><span>✦ 1.2M khách hàng tin chọn</span></div>
+            <div className="login-art"><div className="brand-mark">L</div><h2>Chào bạn trở lại.</h2><p>Đăng nhập để theo dõi đơn, lưu sản phẩm yêu thích và nhận ưu đãi riêng.</p><span>✦ 1.2M khách hàng tin chọn</span></div>
             <form onSubmit={(e) => { e.preventDefault(); setLoginOpen(false); setToast("Đăng nhập thành công. Chào mừng bạn!"); }}>
-              <p className="eyebrow">TÀI KHOẢN NOVA</p><h2>Đăng nhập</h2>
+              <p className="eyebrow">TÀI KHOẢN LOPA</p><h2>Đăng nhập</h2>
               <label>Email hoặc số điện thoại<input required placeholder="hello@example.com" /></label>
               <label>Mật khẩu<input required type="password" placeholder="••••••••" /></label>
               <div className="form-row"><label><input type="checkbox" /> Ghi nhớ tôi</label><a href="#">Quên mật khẩu?</a></div>
@@ -803,7 +803,7 @@ export default function Home() {
               <h3>Đơn hàng của bạn</h3>
               {cart.slice(0, 3).map((item) => <div className="checkout-line" key={item.id}><img src={item.image} alt="" /><p>{item.name}<small>Số lượng: {item.quantity}</small></p><b>{formatPrice(item.price * item.quantity)}</b></div>)}
               <hr /><p><span>Tạm tính</span><b>{formatPrice(subtotal)}</b></p><p><span>Vận chuyển</span><b className="free">Miễn phí</b></p><div className="checkout-total"><span>Tổng thanh toán</span><strong>{formatPrice(subtotal)}</strong></div>
-              <button onClick={() => { setCheckoutOpen(false); setCart([]); setToast("Đặt hàng thành công! Mã đơn #NV240726"); }}>Đặt hàng · {formatPrice(subtotal)}</button>
+              <button onClick={() => { setCheckoutOpen(false); setCart([]); setToast("Đặt hàng thành công! Mã đơn #LP240726"); }}>Đặt hàng · {formatPrice(subtotal)}</button>
               <small>🔒 Giao dịch được mã hóa và bảo vệ</small>
             </aside>
           </section>

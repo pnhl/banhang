@@ -113,7 +113,7 @@ export function submitReview(input: {
   const review: ProductReview = {
     id: `RV-${Date.now()}`,
     productId: input.productId,
-    author: input.author.trim() || profile?.name || "Khách hàng NOVA",
+    author: input.author.trim() || profile?.name || "Khách hàng LOPA",
     email: input.email?.trim() || profile?.email,
     rating: Math.min(5, Math.max(1, Math.round(input.rating))),
     title: input.title.trim(),
