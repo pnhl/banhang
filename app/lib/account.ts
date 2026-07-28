@@ -20,6 +20,7 @@ export type AccountProfile = {
 };
 
 export type OrderStatus =
+  | "Chờ thanh toán"
   | "Chờ xác nhận"
   | "Đang đóng gói"
   | "Đang giao"
@@ -47,6 +48,7 @@ export type NovaOrder = {
   business?: BusinessProfile;
   sellerAllocations?: SellerAllocation[];
   serverPersisted?: boolean;
+  paymentOrderCode?: number;
 };
 
 const PROFILE_KEY = "nova-profile";

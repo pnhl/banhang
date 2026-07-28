@@ -51,6 +51,30 @@ export default function CartPage() {
     const syncCatalog = () =>
       setStocks(getAdminStocks(getManagedProducts()));
     syncCatalog();
+    void fetch("/api/inventory", { cache: "no-store" })
+      .then(
+        async (response) =>
+          response.ok
+            ? ((await response.json()) as {
+                inventory?: Array<{
+                  productId: number;
+                  available: number;
+                }>;
+              })
+            : null,
+      )
+      .then((result) => {
+        if (!result?.inventory) return;
+        setStocks(
+          Object.fromEntries(
+            result.inventory.map((item) => [
+              Number(item.productId),
+              Number(item.available),
+            ]),
+          ),
+        );
+      })
+      .catch(() => undefined);
     window.addEventListener(PRODUCTS_UPDATED_EVENT, syncCatalog);
     return () =>
       window.removeEventListener(PRODUCTS_UPDATED_EVENT, syncCatalog);

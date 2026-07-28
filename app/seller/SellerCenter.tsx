@@ -44,7 +44,10 @@ type CommerceReport = {
 };
 
 function localSellerMetrics(): SellerMetric[] {
-  const orders = getOrders().filter((order) => order.status !== "Đã hủy");
+  const orders = getOrders().filter(
+    (order) =>
+      order.status !== "Đã hủy" && order.status !== "Chờ thanh toán",
+  );
   return sellers.map((seller) => {
     const allocations = orders.flatMap((order) =>
       order.sellerAllocations ??
@@ -160,12 +163,15 @@ export function SellerCenter() {
           </span>
         </a>
         <div>
+          <a href="/seller/operations">Vận hành D1</a>
+          <a href="/seller/media">Thư viện R2</a>
           <a href="/admin">Quản trị chung</a>
           <a href="/stores">Xem marketplace</a>
           <button
             onClick={async () => {
               await fetch("/api/admin/session", { method: "DELETE" });
-              window.location.reload();
+              window.location.href =
+                "/signout-with-chatgpt?return_to=%2F";
             }}
           >
             Đăng xuất
@@ -195,6 +201,8 @@ export function SellerCenter() {
               </b>
             </button>
           ))}
+          <a href="/seller/operations">⚙ Tồn kho & vận chuyển</a>
+          <a href="/seller/media">▧ Quản lý hình ảnh R2</a>
           <a href="/admin">← Trở lại LOPA Admin</a>
         </aside>
 

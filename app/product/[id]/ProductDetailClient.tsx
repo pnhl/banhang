@@ -47,6 +47,26 @@ export function ProductDetailResolver({
       setReady(true);
     };
     sync();
+    void fetch("/api/products", { cache: "no-store" })
+      .then(
+        async (response) =>
+          (await response.json()) as {
+            products?: Array<
+              Product & { sold: number | string; stock?: number }
+            >;
+          },
+      )
+      .then((result) => {
+        const serverCatalog = (result.products ?? []).map((item) => ({
+          ...item,
+          sold: String(item.sold),
+        }));
+        if (!serverCatalog.length) return;
+        setCatalog(serverCatalog);
+        setProduct(serverCatalog.find((item) => item.id === productId));
+        setReady(true);
+      })
+      .catch(() => undefined);
     window.addEventListener(PRODUCTS_UPDATED_EVENT, sync);
     window.addEventListener("storage", sync);
     return () => {
@@ -120,6 +140,29 @@ export function ProductDetailClient({
         Math.max(1, Math.min(current, Math.max(1, nextStock))),
       );
     };
+    const syncServerStock = () => {
+      void fetch("/api/inventory", { cache: "no-store" })
+        .then(
+          async (response) =>
+            (await response.json()) as {
+              inventory?: Array<{ productId: number; available: number }>;
+            },
+        )
+        .then((result) => {
+          const item = result.inventory?.find(
+            (entry) => Number(entry.productId) === product.id,
+          );
+          if (!item) return;
+          setStock(Number(item.available));
+          setQuantity((current) =>
+            Math.max(
+              1,
+              Math.min(current, Math.max(1, Number(item.available))),
+            ),
+          );
+        })
+        .catch(() => undefined);
+    };
     setLiked(getWishlistIds().includes(product.id));
     const profile = getProfile();
     setReviewDraft((current) => ({
@@ -131,6 +174,7 @@ export function ProductDetailClient({
       setReviews(getApprovedReviews(product.id));
     const syncCompare = () => setCompareIds(getCompareIds());
     syncStock();
+    syncServerStock();
     syncReviews();
     syncCompare();
     addRecentlyViewed(product.id);

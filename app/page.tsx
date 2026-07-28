@@ -35,6 +35,7 @@ type Product = {
   image: string;
   badge?: string;
   description: string;
+  stock?: number;
 };
 
 type CartLine = Product & { quantity: number };
@@ -253,6 +254,42 @@ export default function Home() {
       setRecentIds(getRecentlyViewedIds());
     };
     syncCatalog();
+    void fetch("/api/products", { cache: "no-store" })
+      .then(
+        async (response) =>
+          (await response.json()) as {
+            configured?: boolean;
+            products?: Array<
+              Product & { sold: number | string; stock?: number }
+            >;
+          },
+      )
+      .then((result) => {
+        if (!result.configured || !result.products?.length) return;
+        const serverCatalog = result.products.map((product) => ({
+          ...product,
+          sold: String(product.sold),
+        }));
+        setCatalogProducts(serverCatalog);
+        setStocks(
+          Object.fromEntries(
+            result.products.map((product) => [
+              product.id,
+              Number(product.stock ?? 0),
+            ]),
+          ),
+        );
+        setVisibleProductIds(serverCatalog.map((product) => product.id));
+        setMaxPrice(
+          Math.max(
+            7_000_000,
+            ...serverCatalog.map((product) =>
+              Math.ceil(product.price / 100000) * 100000,
+            ),
+          ),
+        );
+      })
+      .catch(() => undefined);
     syncVouchers();
     syncEngagement();
     window.addEventListener("storage", syncCatalog);

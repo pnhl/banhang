@@ -1,21 +1,18 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import {
-  ADMIN_COOKIE,
-  createAdminSessionToken,
-  getAdminPassword,
-} from "../../../lib/admin-auth";
 import {
   createRecordId,
   getCommerceDatabase,
 } from "../../../lib/commerce-server";
 import { sellers } from "../../../lib/marketplace";
+import { requireRole } from "../../../lib/platform-server";
 
 async function authorized() {
-  if (!(await getAdminPassword())) return false;
-  const expected = await createAdminSessionToken();
-  const current = (await cookies()).get(ADMIN_COOKIE)?.value ?? "";
-  return Boolean(expected && current === expected);
+  try {
+    await requireRole(["admin"]);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function GET() {
@@ -42,7 +39,8 @@ export async function GET() {
           COALESCE(SUM(total), 0) AS revenue,
           COALESCE(SUM(tax), 0) AS tax,
           COALESCE(SUM(discount), 0) AS discount
-          FROM commerce_orders WHERE status != 'Đã hủy'`,
+          FROM commerce_orders
+          WHERE status NOT IN ('Đã hủy', 'Chờ thanh toán')`,
         )
         .first(),
       database

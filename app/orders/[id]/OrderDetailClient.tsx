@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { SiteFooter } from "../../components/SiteFooter";
 import { SiteHeader } from "../../components/SiteHeader";
 import {
@@ -19,6 +19,7 @@ import {
 import { getSellerForProduct } from "../../lib/marketplace";
 
 const progress: OrderStatus[] = [
+  "Chờ thanh toán",
   "Chờ xác nhận",
   "Đang đóng gói",
   "Đang giao",
@@ -29,15 +30,87 @@ export function OrderDetailClient({ orderId }: { orderId: string }) {
   const [order, setOrder] = useState<NovaOrder | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [notice, setNotice] = useState("");
+  const [shipment, setShipment] = useState<{
+    carrier?: string;
+    tracking_code?: string;
+    status?: string;
+    estimated_delivery?: string;
+  } | null>(null);
+  const [trackingEvents, setTrackingEvents] = useState<
+    Array<{
+      id: string;
+      status: string;
+      location: string | null;
+      note: string;
+      created_at: string;
+    }>
+  >([]);
+  const [returns, setReturns] = useState<
+    Array<{
+      id: string;
+      reason: string;
+      details: string;
+      status: string;
+      resolution: string | null;
+      refund_amount: number;
+      created_at: string;
+    }>
+  >([]);
+  const [showReturnForm, setShowReturnForm] = useState(false);
 
   useEffect(() => {
-    setOrder(getOrder(orderId));
-    setLoaded(true);
+    const localOrder = getOrder(orderId);
+    setOrder(localOrder);
+    void Promise.all([
+      fetch(`/api/orders/${orderId}`, { cache: "no-store" }),
+      fetch(`/api/orders/${orderId}/tracking`, { cache: "no-store" }),
+      fetch(`/api/orders/${orderId}/returns`, { cache: "no-store" }),
+    ])
+      .then(async ([orderResponse, trackingResponse, returnResponse]) => {
+        if (orderResponse.ok) {
+          const result = (await orderResponse.json()) as {
+            order?: NovaOrder;
+          };
+          if (result.order) setOrder(result.order);
+        }
+        if (trackingResponse.ok) {
+          const result = (await trackingResponse.json()) as {
+            shipment?: typeof shipment;
+            events?: typeof trackingEvents;
+          };
+          setShipment(result.shipment ?? null);
+          setTrackingEvents(result.events ?? []);
+        }
+        if (returnResponse.ok) {
+          const result = (await returnResponse.json()) as {
+            returns?: typeof returns;
+          };
+          setReturns(result.returns ?? []);
+        }
+      })
+      .finally(() => setLoaded(true));
   }, [orderId]);
 
-  const cancel = () => {
+  const cancel = async () => {
+    if (order?.paymentOrderCode) {
+      const response = await fetch(
+        `/api/payments/payos/${order.paymentOrderCode}`,
+        { method: "DELETE" },
+      );
+      if (!response.ok) {
+        const result = (await response.json().catch(() => ({}))) as {
+          message?: string;
+        };
+        setNotice(result.message ?? "Không thể hủy thanh toán.");
+        return;
+      }
+    }
     const next = cancelOrder(orderId);
-    if (!next) return;
+    if (!next && order) {
+      setOrder({ ...order, status: "Đã hủy" });
+      setNotice("Đơn hàng đã được hủy và tồn kho D1 đã được hoàn lại.");
+      return;
+    }
     if (order) {
       const nextStocks = { ...getAdminStocks(getManagedProducts()) };
       order.items.forEach((item) => {
@@ -47,6 +120,42 @@ export function OrderDetailClient({ orderId }: { orderId: string }) {
     }
     setOrder(next);
     setNotice("Đơn hàng đã được hủy và tồn kho đã được hoàn lại.");
+  };
+
+  const requestReturn = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const response = await fetch(`/api/orders/${orderId}/returns`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        reason: form.get("reason"),
+        details: form.get("details"),
+      }),
+    });
+    const result = (await response.json().catch(() => ({}))) as {
+      message?: string;
+      id?: string;
+      status?: string;
+    };
+    if (!response.ok) {
+      setNotice(result.message ?? "Chưa thể gửi yêu cầu đổi trả.");
+      return;
+    }
+    setReturns((current) => [
+      {
+        id: result.id ?? `return-${Date.now()}`,
+        reason: String(form.get("reason") ?? ""),
+        details: String(form.get("details") ?? ""),
+        status: result.status ?? "submitted",
+        resolution: null,
+        refund_amount: 0,
+        created_at: new Date().toISOString(),
+      },
+      ...current,
+    ]);
+    setShowReturnForm(false);
+    setNotice("Yêu cầu đổi trả đã được gửi và ghi nhận trong D1.");
   };
 
   const reorder = () => {
@@ -138,16 +247,55 @@ export function OrderDetailClient({ orderId }: { orderId: string }) {
                 <span>{index < currentIndex ? "✓" : index + 1}</span>
                 <b>{status}</b>
                 <small>
-                  {index === 0
-                    ? "LOPA đã nhận đơn"
-                    : index === 1
-                      ? "Chuẩn bị sản phẩm"
-                      : index === 2
-                        ? "Đang trên đường đến bạn"
-                        : "Giao hàng thành công"}
+                  {
+                    {
+                      "Chờ thanh toán": "Đang chờ payOS xác nhận",
+                      "Chờ xác nhận": "LOPA đã nhận thanh toán",
+                      "Đang đóng gói": "Chuẩn bị sản phẩm",
+                      "Đang giao": "Đang trên đường đến bạn",
+                      "Hoàn tất": "Giao hàng thành công",
+                      "Đã hủy": "Đơn đã kết thúc",
+                    }[status]
+                  }
                 </small>
               </div>
             ))}
+          </section>
+        )}
+
+        {shipment && (
+          <section className="tracking-card">
+            <header>
+              <div>
+                <p className="eyebrow">THEO DÕI VẬN CHUYỂN</p>
+                <h2>{shipment.carrier ?? "LOPA Express"}</h2>
+              </div>
+              <div>
+                <span>{shipment.status}</span>
+                <b>{shipment.tracking_code}</b>
+              </div>
+            </header>
+            <div className="tracking-timeline">
+              {trackingEvents.map((event) => (
+                <article key={event.id}>
+                  <span />
+                  <time>
+                    {new Intl.DateTimeFormat("vi-VN", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    }).format(new Date(event.created_at))}
+                  </time>
+                  <div>
+                    <b>{event.status}</b>
+                    <p>{event.note}</p>
+                    {event.location && <small>{event.location}</small>}
+                  </div>
+                </article>
+              ))}
+              {trackingEvents.length === 0 && (
+                <p>Trạng thái đầu tiên sẽ xuất hiện sau khi payOS xác nhận thanh toán.</p>
+              )}
+            </div>
           </section>
         )}
 
@@ -203,9 +351,65 @@ export function OrderDetailClient({ orderId }: { orderId: string }) {
               {order.status === "Chờ xác nhận" && (
                 <button className="cancel-button" onClick={cancel}>Hủy đơn hàng</button>
               )}
+              {order.status === "Chờ thanh toán" && (
+                <button className="cancel-button" onClick={cancel}>Hủy thanh toán</button>
+              )}
             </div>
           </aside>
         </div>
+        <section className="returns-card">
+          <header>
+            <div>
+              <p className="eyebrow">ĐỔI TRẢ & HOÀN TIỀN</p>
+              <h2>Yêu cầu hỗ trợ sau bán</h2>
+            </div>
+            {!["Chờ thanh toán", "Chờ xác nhận", "Đã hủy"].includes(
+              order.status,
+            ) &&
+              returns.length === 0 && (
+                <button onClick={() => setShowReturnForm((value) => !value)}>
+                  Tạo yêu cầu
+                </button>
+              )}
+          </header>
+          {showReturnForm && (
+            <form onSubmit={requestReturn}>
+              <label>
+                Lý do
+                <select name="reason" required>
+                  <option>Sản phẩm lỗi hoặc hư hỏng</option>
+                  <option>Giao sai sản phẩm</option>
+                  <option>Thiếu phụ kiện</option>
+                  <option>Không đúng mô tả</option>
+                  <option>Lý do khác</option>
+                </select>
+              </label>
+              <label>
+                Mô tả chi tiết
+                <textarea name="details" required minLength={20} />
+              </label>
+              <button>Gửi yêu cầu đổi trả</button>
+            </form>
+          )}
+          {returns.map((item) => (
+            <article key={item.id}>
+              <span>{item.status}</span>
+              <div>
+                <b>{item.reason}</b>
+                <p>{item.details}</p>
+                {item.resolution && <small>Phản hồi: {item.resolution}</small>}
+              </div>
+              {item.refund_amount > 0 && (
+                <strong>{formatPrice(item.refund_amount)}</strong>
+              )}
+            </article>
+          ))}
+          {!returns.length && !showReturnForm && (
+            <p className="returns-empty">
+              Chưa có yêu cầu. LOPA hỗ trợ tiếp nhận đổi trả ngay trên đơn hàng.
+            </p>
+          )}
+        </section>
       </main>
       {notice && <div className="toast"><span>✓</span>{notice}</div>}
       <SiteFooter />

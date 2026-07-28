@@ -9,7 +9,6 @@ import {
   getProfile,
   NovaOrder,
   saveProfile,
-  signOutDemo,
 } from "../lib/account";
 import { formatPrice } from "../lib/catalog";
 
@@ -18,16 +17,86 @@ export default function AccountPage() {
   const [orders, setOrders] = useState<NovaOrder[]>([]);
   const [editing, setEditing] = useState(false);
   const [notice, setNotice] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [role, setRole] = useState<"customer" | "seller" | "admin">(
+    "customer",
+  );
 
   useEffect(() => {
-    setProfile(getProfile());
-    setOrders(getOrders());
+    setLoading(true);
+    const localProfile = getProfile();
+    const localOrders = getOrders();
+    setProfile(localProfile);
+    setOrders(localOrders);
+    void Promise.all([
+      fetch("/api/me", { cache: "no-store" }),
+      fetch("/api/orders", { cache: "no-store" }),
+    ])
+      .then(async ([meResponse, orderResponse]) => {
+        if (meResponse.ok) {
+          const result = (await meResponse.json()) as {
+            authenticated?: boolean;
+            user?: {
+              displayName: string;
+              email: string;
+              phone: string;
+              role: "customer" | "seller" | "admin";
+            };
+            address?: {
+              recipient_name?: string;
+              phone?: string;
+              province_code?: number;
+              province?: string;
+              ward_code?: number;
+              ward?: string;
+              address_detail?: string;
+            } | null;
+          };
+          if (result.authenticated && result.user) {
+            const nextProfile: AccountProfile = {
+              name: result.address?.recipient_name ?? result.user.displayName,
+              email: result.user.email,
+              phone: result.address?.phone ?? result.user.phone ?? "",
+              provinceCode: result.address?.province_code,
+              province: result.address?.province,
+              wardCode: result.address?.ward_code,
+              ward: result.address?.ward,
+              addressDetail: result.address?.address_detail,
+              address: [
+                result.address?.address_detail,
+                result.address?.ward,
+                result.address?.province,
+              ]
+                .filter(Boolean)
+                .join(", "),
+            };
+            setProfile(nextProfile);
+            saveProfile(nextProfile);
+            setRole(result.user.role);
+          }
+        }
+        if (orderResponse.ok) {
+          const result = (await orderResponse.json()) as {
+            orders?: NovaOrder[];
+          };
+          const merged = [
+            ...(result.orders ?? []),
+            ...localOrders.filter(
+              (local) =>
+                !(result.orders ?? []).some((server) => server.id === local.id),
+            ),
+          ];
+          setOrders(merged);
+        }
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const totalSpent = useMemo(
     () =>
       orders
         .filter((order) => order.status !== "Đã hủy")
+        .filter((order) => order.status !== "Chờ thanh toán")
         .reduce((sum, order) => sum + order.total, 0),
     [orders],
   );
@@ -50,6 +119,25 @@ export default function AccountPage() {
               .join(", ")
           : addressDetail,
     };
+    void fetch("/api/me", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        phone: next.phone,
+        address:
+          next.province && next.ward && next.addressDetail
+            ? {
+                recipientName: next.name,
+                phone: next.phone,
+                provinceCode: next.provinceCode,
+                province: next.province,
+                wardCode: next.wardCode,
+                ward: next.ward,
+                addressDetail: next.addressDetail,
+              }
+            : undefined,
+      }),
+    });
     saveProfile(next);
     setProfile(next);
     setEditing(false);
@@ -57,7 +145,7 @@ export default function AccountPage() {
     window.setTimeout(() => setNotice(""), 2200);
   };
 
-  if (!profile) {
+  if (!profile && !loading) {
     return (
       <>
         <SiteHeader />
@@ -73,6 +161,18 @@ export default function AccountPage() {
     );
   }
 
+  if (!profile) {
+    return (
+      <>
+        <SiteHeader />
+        <main className="platform-loading account-loading">
+          Đang đồng bộ hồ sơ D1…
+        </main>
+        <SiteFooter />
+      </>
+    );
+  }
+
   return (
     <>
       <SiteHeader />
@@ -80,10 +180,14 @@ export default function AccountPage() {
         <header>
           <div className="account-avatar">{profile.name.slice(0, 1).toUpperCase()}</div>
           <div><p className="eyebrow">THÀNH VIÊN LOPA</p><h1>Xin chào, {profile.name}.</h1><p>{profile.email} · {profile.phone || "Chưa thêm số điện thoại"}</p></div>
-          <button onClick={() => { signOutDemo(); setProfile(null); }}>Đăng xuất</button>
+          <div className="account-header-actions">
+            {role !== "customer" && <a href="/seller">Seller Center</a>}
+            <a href="/notifications">Thông báo</a>
+            <a href="/signout-with-chatgpt?return_to=%2F">Đăng xuất</a>
+          </div>
         </header>
         <section className="account-stats">
-          <article><span>Đơn hàng</span><strong>{orders.length}</strong><small>Trên thiết bị này</small></article>
+          <article><span>Đơn hàng</span><strong>{orders.length}</strong><small>Đồng bộ từ D1 và thiết bị</small></article>
           <article><span>Tổng mua sắm</span><strong>{formatPrice(totalSpent)}</strong><small>Giá trị đơn đã tạo</small></article>
           <article><span>Hạng thành viên</span><strong>LOPA Seed</strong><small>Còn 2 đơn để lên hạng</small></article>
         </section>
@@ -139,7 +243,7 @@ export default function AccountPage() {
                 <div><dt>Địa chỉ chi tiết</dt><dd>{profile.addressDetail || profile.address || "Chưa cập nhật"}</dd></div>
               </dl>
             )}
-            <small>Dữ liệu tài khoản demo được lưu trên trình duyệt này, không gửi lên máy chủ.</small>
+            <small>Email và vai trò do phiên đăng nhập xác thực; hồ sơ giao hàng được lưu trong D1.</small>
           </aside>
         </div>
       </main>

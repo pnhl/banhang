@@ -1,23 +1,53 @@
-"use client";
-
-import { FormEvent, useState } from "react";
+import { chatGPTSignInPath, getChatGPTUser } from "../chatgpt-auth";
 import { SiteFooter } from "../components/SiteFooter";
 import { SiteHeader } from "../components/SiteHeader";
-import { saveProfile } from "../lib/account";
 
-export default function RegisterPage() {
-  const [message, setMessage] = useState("");
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    if (form.get("password") !== form.get("confirm")) return setMessage("Mật khẩu xác nhận chưa trùng khớp.");
-    saveProfile({
-      name: String(form.get("name") ?? ""),
-      email: String(form.get("email") ?? ""),
-      phone: String(form.get("phone") ?? ""),
-    });
-    setMessage("Tài khoản demo đã được tạo. Đang mở trang tài khoản…");
-    window.setTimeout(() => { window.location.href = "/account"; }, 700);
-  };
-  return <><SiteHeader /><main className="auth-page register-page"><section className="auth-art"><div className="auth-orbit"><span>✦</span></div><p className="eyebrow">GIA NHẬP LOPA</p><h1>Mở khóa trải nghiệm mua sắm dành riêng cho bạn.</h1><p>Đăng ký trong một phút để nhận voucher chào mừng và quản lý mọi đơn hàng tại một nơi.</p><div><span>50K Voucher chào mừng</span><span>Freeship đơn đầu tiên</span></div></section><form className="auth-form" onSubmit={submit}><p className="eyebrow">TẠO TÀI KHOẢN</p><h2>Đăng ký thành viên</h2><p>Đã có tài khoản? <a href="/login">Đăng nhập</a></p><div className="two-col"><label>Họ và tên<input required name="name" placeholder="Nguyễn Minh Anh" /></label><label>Số điện thoại<input required name="phone" placeholder="09xx xxx xxx" /></label></div><label>Email<input required type="email" name="email" placeholder="hello@example.com" /></label><label>Mật khẩu<input required type="password" name="password" minLength={8} placeholder="Ít nhất 8 ký tự" /></label><label>Xác nhận mật khẩu<input required type="password" name="confirm" minLength={8} placeholder="Nhập lại mật khẩu" /></label><div className="auth-check"><label><input required type="checkbox" /> Tôi đồng ý với điều khoản và chính sách bảo mật</label></div><button>Tạo tài khoản</button>{message && <div className={message.startsWith("Mật") ? "form-error" : "form-success"}>{message}</div>}<small>Tài khoản demo chỉ được lưu trên trình duyệt; mật khẩu không được gửi hoặc lưu.</small></form></main><SiteFooter /></>;
+export const dynamic = "force-dynamic";
+
+export default async function RegisterPage() {
+  const user = await getChatGPTUser();
+  return (
+    <>
+      <SiteHeader />
+      <main className="auth-page register-page">
+        <section className="auth-art">
+          <div className="auth-orbit"><span>✦</span></div>
+          <p className="eyebrow">GIA NHẬP LOPA</p>
+          <h1>Tạo hồ sơ thành viên mà không cần thêm một mật khẩu mới.</h1>
+          <p>
+            Sau lần đăng nhập đầu tiên, LOPA tự tạo hồ sơ D1 và gán quyền khách
+            hàng. Bạn có thể nộp hồ sơ mở gian hàng bất cứ lúc nào.
+          </p>
+          <div>
+            <span>Hồ sơ đồng bộ D1</span>
+            <span>Đăng ký Seller Center</span>
+          </div>
+        </section>
+        <section className="auth-form auth-real-login">
+          <p className="eyebrow">TẠO TÀI KHOẢN</p>
+          <h2>{user ? "Hồ sơ đã sẵn sàng" : "Đăng ký thành viên"}</h2>
+          <p>
+            {user
+              ? `Danh tính ${user.email} đã được xác thực.`
+              : "Tài khoản khách hàng được tạo tự động trong D1 sau khi xác thực thành công."}
+          </p>
+          <a
+            className="auth-primary-link"
+            href={user ? "/account" : chatGPTSignInPath("/account")}
+          >
+            {user ? "Mở hồ sơ của tôi →" : "Xác thực và tạo tài khoản →"}
+          </a>
+          <div className="auth-security-list">
+            <span>Email được xác minh bởi nền tảng</span>
+            <span>Địa chỉ và số điện thoại chỉ lưu khi bạn chủ động nhập</span>
+            <span>Lịch sử quyền được ghi vào nhật ký bảo mật</span>
+          </div>
+          <small>
+            LOPA không có biểu mẫu mật khẩu riêng và không gửi mật khẩu vào D1.
+          </small>
+        </section>
+      </main>
+      <SiteFooter />
+    </>
+  );
 }

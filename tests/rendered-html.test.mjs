@@ -44,6 +44,8 @@ test("renders the connected commerce routes", async () => {
     ["/account", "Đăng nhập để quản lý mua sắm"],
     ["/wishlist", "Sản phẩm yêu thích"],
     ["/support", "Trung tâm trợ giúp"],
+    ["/search?q=tai+nghe", "Tìm kiếm thông minh"],
+    ["/notifications", "Trung tâm thông báo"],
     ["/login", "Đăng nhập"],
     ["/register", "Đăng ký thành viên"],
     ["/product/1", "Tai nghe chụp tai LopaSound Air"],
@@ -54,6 +56,9 @@ test("renders the connected commerce routes", async () => {
     ["/store/nova-digital", "LOPA Digital"],
     ["/invoices/LP-DEMO", "Đang chuẩn bị hóa đơn"],
     ["/policies/shipping", "Chính sách vận chuyển"],
+    ["/seller/onboarding", "Đăng nhập trước khi gửi hồ sơ"],
+    ["/seller/operations", "chưa có quyền vận hành gian hàng"],
+    ["/seller/media", "chưa có quyền quản lý hình ảnh"],
   ];
 
   for (const [path, expected] of routes) {
@@ -69,6 +74,16 @@ test("protects the admin dashboard behind the password screen", async () => {
   const html = await response.text();
   assert.match(html, /Đăng nhập quản trị/i);
   assert.doesNotMatch(html, /Doanh thu ghi nhận/i);
+  assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(response.headers.get("x-frame-options"), "DENY");
+});
+
+test("renders the secure payOS checkout option", async () => {
+  const response = await render("/checkout");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /payOS · VietQR/i);
+  assert.match(html, /QR đúng tổng tiền, tự xác nhận/i);
 });
 
 test("renders marketplace SEO and protects seller operations", async () => {

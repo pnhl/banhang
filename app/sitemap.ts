@@ -4,7 +4,7 @@ import { sellers } from "./lib/marketplace";
 import { categories, SITE_URL } from "./lib/seo";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const updatedAt = new Date("2026-07-26T00:00:00+07:00");
+  const updatedAt = new Date("2026-07-29T00:00:00+07:00");
   return [
     {
       url: SITE_URL,
@@ -18,6 +18,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.8,
     },
+    ...["search", "support", "compare"].map((slug) => ({
+      url: `${SITE_URL}/${slug}`,
+      lastModified: updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.65,
+    })),
     ...categories.map((category) => ({
       url: `${SITE_URL}/category/${category.slug}`,
       lastModified: updatedAt,

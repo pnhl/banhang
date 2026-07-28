@@ -94,7 +94,7 @@ export default async function RootLayout({
         publisher: { "@id": `${SITE_URL}/#organization` },
         potentialAction: {
           "@type": "SearchAction",
-          target: `${SITE_URL}/?q={search_term_string}#products`,
+          target: `${SITE_URL}/search?q={search_term_string}`,
           "query-input": "required name=search_term_string",
         },
       },

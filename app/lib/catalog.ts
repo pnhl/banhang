@@ -10,6 +10,7 @@ export type Product = {
   image: string;
   badge?: string;
   description: string;
+  stock?: number;
 };
 
 export type CartLine = Product & {
@@ -421,7 +422,9 @@ export const addProductToCart = (
   variant = "Tiêu chuẩn",
 ) => {
   const cart = getCart();
-  const stock = getProductStock(product.id);
+  const stock = Number.isFinite(Number(product.stock))
+    ? Math.max(0, Number(product.stock))
+    : getProductStock(product.id);
   if (stock === 0) return cart;
   const key = cartLineKey({ id: product.id, variant });
   const existing = cart.find((item) => cartLineKey(item) === key);

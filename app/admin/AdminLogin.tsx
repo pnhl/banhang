@@ -40,11 +40,18 @@ export function AdminLogin({ configured }: { configured: boolean }) {
         <p className="eyebrow">KHU VỰC ĐƯỢC BẢO VỆ</p>
         <h1>Đăng nhập quản trị</h1>
         <p>
-          Nhập mật khẩu quản trị để xem đơn hàng, khách hàng và báo cáo vận
-          hành.
+          Vai trò admin được xác minh từ tài khoản nền tảng và danh sách email
+          quản trị trên máy chủ.
         </p>
+        <a
+          className="admin-platform-login"
+          href="/signin-with-chatgpt?return_to=%2Fadmin"
+        >
+          Đăng nhập bằng tài khoản quản trị →
+        </a>
         {configured ? (
-          <form onSubmit={submit}>
+          <form className="admin-password-fallback" onSubmit={submit}>
+            <small>Hoặc dùng mật khẩu khẩn cấp đã cấu hình</small>
             <label>
               Mật khẩu quản trị
               <input
@@ -62,7 +69,8 @@ export function AdminLogin({ configured }: { configured: boolean }) {
           </form>
         ) : (
           <div className="admin-config-warning">
-            Chưa cấu hình biến môi trường <b>ADMIN_PASSWORD</b> trên máy chủ.
+            Chưa cấu hình mật khẩu khẩn cấp. Đăng nhập nền tảng vẫn hoạt động khi
+            email nằm trong <b>ADMIN_EMAILS</b>.
           </div>
         )}
         <a className="admin-back-link" href="/">

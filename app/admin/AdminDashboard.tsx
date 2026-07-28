@@ -123,6 +123,7 @@ const seededOrders: AdminOrder[] = [
 ];
 
 const statusOptions: OrderStatus[] = [
+  "Chờ thanh toán",
   "Chờ xác nhận",
   "Đang đóng gói",
   "Đang giao",
@@ -198,8 +199,12 @@ export function AdminDashboard() {
     const syncReviews = () => setReviews(getReviews());
     syncReviews();
     void fetch("/api/admin/commerce", { cache: "no-store" })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((result: CommerceSummary | null) => {
+      .then(async (response) =>
+        response.ok
+          ? ((await response.json()) as CommerceSummary)
+          : null,
+      )
+      .then((result) => {
         if (result) setCommerceSummary(result);
       })
       .catch(() => undefined);
@@ -573,6 +578,14 @@ export function AdminDashboard() {
           <a className="admin-seller-link" href="/seller">
             <span>↗</span>
             Seller Center
+          </a>
+          <a className="admin-seller-link" href="/seller/operations">
+            <span>⚙</span>
+            Vận hành D1
+          </a>
+          <a className="admin-seller-link" href="/seller/media">
+            <span>▧</span>
+            Thư viện R2
           </a>
           <button
             className={section === "overview" ? "active" : ""}

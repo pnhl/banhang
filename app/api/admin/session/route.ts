@@ -5,8 +5,17 @@ import {
   getAdminPassword,
   verifyAdminPassword,
 } from "../../../lib/admin-auth";
+import {
+  assertSameOrigin,
+  errorResponse,
+} from "../../../lib/platform-server";
 
 export async function POST(request: Request) {
+  try {
+    assertSameOrigin(request);
+  } catch (error) {
+    return errorResponse(error);
+  }
   if (!(await getAdminPassword())) {
     return NextResponse.json(
       { message: "Mật khẩu quản trị chưa được cấu hình trên máy chủ." },
@@ -37,6 +46,11 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  try {
+    assertSameOrigin(request);
+  } catch (error) {
+    return errorResponse(error);
+  }
   const response = NextResponse.json({ ok: true });
   response.cookies.set(ADMIN_COOKIE, "", {
     httpOnly: true,
